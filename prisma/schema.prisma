@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Owner {
+  id          String          @id @default(cuid()) @map("_id")
+  email       String          @unique
+  password    String
+  name        String
+  phone       String?
+  isAdmin     Boolean         @default(false)
+  companies   Company[]
+  memberships CompanyMember[]
+  sentInvites CompanyInvite[] @relation("InvitesSent")
+  createdAt   DateTime        @default(now())
+}
+
+model Company {
+  id          String          @id @default(cuid()) @map("_id")
+  name        String
+  cnpj        String?         @unique
+  logoUrl     String?
+  description String?
+  ownerId     String
+  owner       Owner           @relation(fields: [ownerId], references: [id])
+  apps        OAuthApp[]
+  members     CompanyMember[]
+  invites     CompanyInvite[]
+  createdAt   DateTime        @default(now())
+}
+
+model CompanyMember {
+  id        String   @id @default(cuid()) @map("_id")
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, ownerId])
+}
+
+model CompanyInvite {
+  id          String   @id @default(cuid()) @map("_id")
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type        String
+  status      String   @default("pending")
+  fromOwnerId String
+  fromOwner   Owner    @relation("InvitesSent", fields: [fromOwnerId], references: [id], onDelete: Cascade)
+  toEmail     String
+  createdAt   DateTime @default(now())
+}
+
+model OAuthApp {
+  id            String              @id @default(cuid()) @map("_id")
+  name          String
+  clientId      String              @unique
+  clientSecret  String
+  redirectUris  String[]
+  scopes        String[]
+  companyId     String
+  company       Company             @relation(fields: [companyId], references: [id])
+  users         AppUser[]
+  codes         AuthorizationCode[]
+  tokens        AccessToken[]
+  refreshTokens RefreshToken[]
+  authEvents    AuthEvent[]
+  createdAt     DateTime            @default(now())
+}
+
+model AppUser {
+  id                 String               @id @default(cuid()) @map("_id")
+  username           String
+  password           String
+  name               String
+  appId              String
+  app                OAuthApp             @relation(fields: [appId], references: [id])
+  mustChangePassword Boolean              @default(false)
+  codes              AuthorizationCode[]
+  tokens             AccessToken[]
+  refreshTokens      RefreshToken[]
+  resetTokens        PasswordResetToken[]
+  authEvents         AuthEvent[]
+  createdAt          DateTime             @default(now())
+
+  @@unique([username, appId])
+}
+
+model AuthEvent {
+  id        String   @id @default(cuid()) @map("_id")
+  appId     String
+  app       OAuthApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+  appUserId String?
+  appUser   AppUser? @relation(fields: [appUserId], references: [id], onDelete: NoAction)
+  event     String
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+model AuthorizationCode {
+  id                  String   @id @default(cuid()) @map("_id")
+  codeHash            String   @unique
+  appUserId           String
+  appUser             AppUser  @relation(fields: [appUserId], references: [id])
+  appId               String
+  app                 OAuthApp @relation(fields: [appId], references: [id])
+  redirectUri         String
+  scope               String
+  codeChallenge       String?
+  codeChallengeMethod String?
+  used                Boolean  @default(false)
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
+}
+
+model AccessToken {
+  id        String   @id @default(cuid()) @map("_id")
+  jti       String   @unique
+  appUserId String
+  appUser   AppUser  @relation(fields: [appUserId], references: [id])
+  appId     String
+  app       OAuthApp @relation(fields: [appId], references: [id])
+  scope     String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid()) @map("_id")
+  tokenHash String   @unique
+  appUserId String
+  appUser   AppUser  @relation(fields: [appUserId], references: [id])
+  appId     String
+  app       OAuthApp @relation(fields: [appId], references: [id])
+  scope     String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid()) @map("_id")
+  tokenHash String   @unique
+  appUserId String
+  appUser   AppUser  @relation(fields: [appUserId], references: [id])
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
