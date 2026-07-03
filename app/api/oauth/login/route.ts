@@ -54,3 +54,11 @@ export async function POST(req: NextRequest) {
   if (user.mustChangePassword) redirectUrl.searchParams.set('must_change_password', '1')
   return NextResponse.json({ redirect: redirectUrl.toString() })
 }
+
+export async function GET(request: NextRequest) {
+  const url = request.nextUrl.clone();
+
+  url.pathname = "/oauth/login";
+
+  return NextResponse.redirect(url, 307);
+}
