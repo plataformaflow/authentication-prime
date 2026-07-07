@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send } from 'lucide-react'
+import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send, Settings, ImageIcon } from 'lucide-react'
 import { validateEmail, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -29,7 +29,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const [company, setCompany] = useState<CompanyDetail | null>(null)
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
-  const [tab, setTab] = useState<'analytics' | 'members'>('analytics')
+  const [tab, setTab] = useState<'analytics' | 'members' | 'settings'>('analytics')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteEmailError, setInviteEmailError] = useState('')
   const [inviting, setInviting] = useState(false)
@@ -75,6 +75,11 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
   if (!company) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Carregando...</div>
 
   const isOwner = company.role === 'owner'
+  const tabs = [
+    ['analytics', 'Análises'] as const,
+    ['members', 'Membros'] as const,
+    ...(isOwner ? [['settings', 'Configurações'] as const] : []),
+  ]
 
   return (
     <div className="space-y-6">
@@ -86,16 +91,25 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           <span className="text-foreground">{company.name}</span>
         </nav>
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{company.name}</h1>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">CNPJ: {company.cnpj}</span>
-              <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-full text-indigo-700 dark:text-indigo-400">
-                {company.apps.length} aplicaç{company.apps.length !== 1 ? 'ões' : 'ão'}
-              </span>
-              <span className="text-xs px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full text-emerald-700 dark:text-emerald-400">
-                {company.members.length} membro{company.members.length !== 1 ? 's' : ''}
-              </span>
+          <div className="flex items-center gap-3">
+            {company.logoUrl ? (
+              <img src={company.logoUrl} alt={company.name} className="w-10 h-10 rounded-lg object-cover border border-border" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold text-lg shrink-0">
+                {company.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{company.name}</h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {company.cnpj && <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">CNPJ: {company.cnpj}</span>}
+                <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-full text-indigo-700 dark:text-indigo-400">
+                  {company.apps.length} aplicaç{company.apps.length !== 1 ? 'ões' : 'ão'}
+                </span>
+                <span className="text-xs px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full text-emerald-700 dark:text-emerald-400">
+                  {company.members.length} membro{company.members.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -116,7 +130,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
       {/* Tabs */}
       <div className="border-b border-border">
         <div className="flex gap-0">
-          {([['analytics', 'Análises'] as const, ['members', 'Membros'] as const]).map(([key, label]) => (
+          {tabs.map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               {label}
@@ -157,7 +171,6 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
             <div className="text-center py-10 text-muted-foreground text-sm">Carregando dados...</div>
           )}
 
-          {/* Apps list */}
           {company.apps.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Aplicações</p>
@@ -253,6 +266,115 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       )}
+
+      {tab === 'settings' && isOwner && (
+        <CompanySettingsTab company={company} onUpdate={setCompany} onDelete={handleDelete} />
+      )}
+    </div>
+  )
+}
+
+function CompanySettingsTab({
+  company,
+  onUpdate,
+  onDelete,
+}: {
+  company: CompanyDetail
+  onUpdate: (c: CompanyDetail) => void
+  onDelete: () => void
+}) {
+  const [form, setForm] = useState({ name: company.name, logoUrl: company.logoUrl ?? '', description: company.description ?? '' })
+  const [loading, setLoading] = useState(false)
+
+  async function handleSave(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (form.name.trim().length < 2) { toast.error('Nome deve ter ao menos 2 caracteres.'); return }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/companies/${company.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name.trim(), logoUrl: form.logoUrl.trim() || '', description: form.description.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate({ ...company, name: data.name, logoUrl: data.logoUrl, description: data.description })
+      toast.success('Empresa atualizada!')
+    } catch { toast.error('Erro ao salvar.') }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      {/* Logo preview */}
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Settings className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Informações da empresa</h3>
+        </div>
+
+        {/* Preview da logo */}
+        <div className="flex items-center gap-4">
+          {form.logoUrl ? (
+            <img src={form.logoUrl} alt="Logo" className="w-16 h-16 rounded-xl object-cover border border-border" />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center shrink-0">
+              <ImageIcon className="w-6 h-6 text-muted-foreground opacity-50" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{form.name || 'Nome da empresa'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Prévia do avatar</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSave} noValidate className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome *</label>
+            <input
+              type="text" maxLength={100} value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">URL da logo</label>
+            <input
+              type="url" maxLength={500} value={form.logoUrl} placeholder="https://empresa.com/logo.png"
+              onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">A imagem será exibida na tela de login OAuth desta empresa.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição</label>
+            <textarea
+              maxLength={300} rows={2} value={form.description} placeholder="Descrição opcional..."
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <button type="submit" disabled={loading}
+            className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+            {loading ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </form>
+      </div>
+
+      {/* Zona de perigo */}
+      <div className="bg-card border border-destructive/30 rounded-xl p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-destructive">Zona de perigo</h3>
+        <p className="text-xs text-muted-foreground">
+          Excluir a empresa removerá permanentemente todas as aplicações, usuários e dados associados. Esta ação não pode ser desfeita.
+        </p>
+        <button onClick={onDelete}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-destructive border border-destructive/40 rounded-lg hover:bg-destructive/10 transition-colors">
+          <Trash2 className="w-3.5 h-3.5" /> Excluir empresa
+        </button>
+      </div>
     </div>
   )
 }

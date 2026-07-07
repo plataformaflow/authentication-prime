@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Plus, AppWindow, ArrowRight, Copy, Check } from 'lucide-react'
+import { Plus, AppWindow, ArrowRight, Copy, Check, Building2, ChevronDown, ChevronRight } from 'lucide-react'
 import { validateName, validateScopes, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { PageHeader } from '@/components/layout/page-header'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
@@ -13,7 +13,7 @@ import { RedirectUriList } from '@/components/dashboard/redirect-uri-list'
 
 const SCOPES = ['openid', 'profile', 'email']
 
-interface App { id: string; name: string; clientId: string; company: { name: string }; _count: { users: number }; scopes: string[] }
+interface App { id: string; name: string; clientId: string; company: { id: string; name: string }; _count: { users: number }; scopes: string[] }
 interface Company { id: string; name: string }
 
 export default function AppsPage() {
@@ -63,6 +63,15 @@ export default function AppsPage() {
   function toggleScope(s: string) {
     setForm(p => ({ ...p, scopes: p.scopes.includes(s) ? p.scopes.filter(x => x !== s) : [...p.scopes, s] }))
   }
+
+  // Agrupar apps por empresa
+  const grouped = apps.reduce<Record<string, { company: { id: string; name: string }; apps: App[] }>>((acc, app) => {
+    const cid = app.company.id
+    if (!acc[cid]) acc[cid] = { company: app.company, apps: [] }
+    acc[cid].apps.push(app)
+    return acc
+  }, {})
+  const groups = Object.values(grouped)
 
   return (
     <div className="space-y-6">
@@ -147,7 +156,49 @@ export default function AppsPage() {
           <p className="text-sm">Nenhum app encontrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="space-y-6">
+          {groups.map(({ company, apps: groupApps }) => (
+            <CompanyGroup key={company.id} company={company} apps={groupApps} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompanyGroup({ company, apps }: { company: { id: string; name: string }; apps: App[] }) {
+  const [open, setOpen] = useState(true)
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 mb-3 group w-full text-left"
+      >
+        <div className="w-6 h-6 rounded-md bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
+          <Building2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <span className="text-sm font-semibold text-foreground group-hover:text-indigo-600 transition-colors">
+          {company.name}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {apps.length} app{apps.length !== 1 ? 's' : ''}
+        </span>
+        <Link
+          href={`/dashboard/companies/${company.id}`}
+          onClick={e => e.stopPropagation()}
+          className="ml-auto text-xs text-muted-foreground hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+        >
+          Ver empresa →
+        </Link>
+        {open
+          ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        }
+      </button>
+
+      {open && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-2">
           {apps.map(app => <AppCard key={app.id} app={app} />)}
         </div>
       )}
@@ -170,7 +221,7 @@ function AppCard({ app }: { app: App }) {
         <AppAvatar name={app.name} size="md" />
         <div className="min-w-0">
           <p className="font-semibold text-sm truncate">{app.name}</p>
-          <p className="text-xs text-muted-foreground truncate">{app.company?.name}</p>
+          <p className="text-xs text-muted-foreground">{app._count.users} usuário{app._count.users !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
