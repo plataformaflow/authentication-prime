@@ -95,6 +95,7 @@ model AppCollaborator {
   owner            Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   canViewAnalytics Boolean  @default(true)
   canCreateUsers   Boolean  @default(false)
+  canEditUsers     Boolean  @default(false)
   maxUsers         Int?
   createdAt        DateTime @default(now())
 

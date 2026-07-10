@@ -5,7 +5,7 @@ import { withSession } from '@/lib/middleware'
 
 type AppAccess = 'full' | 'collaborator' | null
 
-async function getAppAccess(appId: string, ownerId: string): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; maxUsers: number | null } }> {
+async function getAppAccess(appId: string, ownerId: string): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; maxUsers: number | null } }> {
   const app = await prisma.oAuthApp.findFirst({
     where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
@@ -16,7 +16,7 @@ async function getAppAccess(appId: string, ownerId: string): Promise<{ access: A
   if (!collab) return { access: null }
   return {
     access: 'collaborator',
-    collab: { canViewAnalytics: collab.canViewAnalytics, canCreateUsers: collab.canCreateUsers, maxUsers: collab.maxUsers },
+    collab: { canViewAnalytics: collab.canViewAnalytics, canCreateUsers: collab.canCreateUsers, canEditUsers: collab.canEditUsers, maxUsers: collab.maxUsers },
   }
 }
 

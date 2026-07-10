@@ -33,6 +33,7 @@ export async function GET() {
       _permissions: {
         canViewAnalytics: e.canViewAnalytics,
         canCreateUsers: e.canCreateUsers,
+        canEditUsers: e.canEditUsers,
         maxUsers: e.maxUsers,
       },
     }))

@@ -18,7 +18,7 @@ import { RedirectUriList } from '@/components/dashboard/redirect-uri-list'
 
 const SCOPES = ['openid', 'profile', 'email']
 
-interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; maxUsers: number | null }
+interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; maxUsers: number | null }
 interface AppDetail {
   id: string; name: string; logoUrl?: string; description?: string
   clientId?: string; scopes: string[]; redirectUris?: string[]
@@ -51,14 +51,12 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
   if (!app) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Carregando...</div>
 
   const isFull = app._access === 'full'
-  const perms = app._permissions ?? { canViewAnalytics: true, canCreateUsers: true, maxUsers: null }
+  const perms = app._permissions ?? { canViewAnalytics: true, canCreateUsers: true, canEditUsers: true, maxUsers: null }
 
   const tabs: [Tab, string, React.ElementType][] = [
     ...(isFull || perms.canViewAnalytics ? [['analytics', 'Análises', BarChart3] as [Tab, string, React.ElementType]] : []),
-    ...(isFull ? [
-      ['profile', 'Perfil', ImageIcon] as [Tab, string, React.ElementType],
-      ['api', 'API', KeyRound] as [Tab, string, React.ElementType],
-    ] : []),
+    ['profile', 'Perfil', ImageIcon] as [Tab, string, React.ElementType],
+    ...(isFull ? [['api', 'API', KeyRound] as [Tab, string, React.ElementType]] : []),
     ['users', 'Usuários', Users] as [Tab, string, React.ElementType],
     ...(isFull ? [
       ['collaborators', 'Colaboradores', UserPlus] as [Tab, string, React.ElementType],
@@ -112,10 +110,10 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
       </div>
 
       {tab === 'analytics' && <AppAnalyticsTab appId={id} />}
-      {tab === 'profile' && isFull && <AppProfileTab app={app} onUpdate={setApp} />}
+      {tab === 'profile' && <AppProfileTab app={app} onUpdate={setApp} />}
       {tab === 'api' && isFull && <AppApiTab app={app} onUpdate={setApp} />}
       {tab === 'users' && (
-        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} maxUsers={isFull ? null : perms.maxUsers} />
+        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull} maxUsers={isFull ? null : perms.maxUsers} />
       )}
       {tab === 'collaborators' && isFull && <AppCollaboratorsTab appId={id} />}
       {tab === 'activity' && isFull && <AppActivityTab appId={id} />}
@@ -429,9 +427,15 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
 
 // ─── Users Tab ───────────────────────────────────────────────────────────────
 
-function AppUsersTab({ appId, canCreate, maxUsers }: { appId: string; canCreate: boolean; maxUsers: number | null }) {
-  const [users, setUsers] = useState<Array<{ id: string; name: string; username: string; mustChangePassword: boolean; createdAt: string; createdByOwner?: { id: string; name: string } | null }>>([])
+type AppUser = { id: string; name: string; username: string; mustChangePassword: boolean; createdAt: string; createdByOwner?: { id: string; name: string } | null }
+
+function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId: string; canCreate: boolean; canEdit: boolean; canDelete: boolean; maxUsers: number | null }) {
+  const [users, setUsers] = useState<AppUser[]>([])
   const [showCreate, setShowCreate] = useState(false)
+  const [editUser, setEditUser] = useState<AppUser | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', username: '' })
+  const [editErrors, setEditErrors] = useState<FieldErrors>({})
+  const [editLoading, setEditLoading] = useState(false)
   const [form, setForm] = useState({ name: '', username: '', password: '' })
   const [formErrors, setFormErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
@@ -462,11 +466,38 @@ function AppUsersTab({ appId, canCreate, maxUsers }: { appId: string; canCreate:
   }
 
   async function handleDelete(userId: string) {
-    if (!confirm('Excluir usuário?')) return
     const res = await fetch(`/api/apps/${appId}/users/${userId}`, { method: 'DELETE' })
     if (!res.ok) { toast.error('Erro ao excluir usuário.'); return }
     toast.success('Usuário excluído.')
     setUsers(p => p.filter(u => u.id !== userId))
+  }
+
+  function openEdit(u: AppUser) {
+    setEditUser(u)
+    setEditForm({ name: u.name, username: u.username })
+    setEditErrors({})
+  }
+
+  async function handleEdit(ev: React.FormEvent) {
+    ev.preventDefault()
+    const e: FieldErrors = {}
+    if (!editForm.name.trim() || editForm.name.length < 2) e.name = 'Nome deve ter ao menos 2 caracteres.'
+    if (!editForm.username.trim() || editForm.username.length < 3) e.username = 'Usuário deve ter ao menos 3 caracteres.'
+    setEditErrors(e)
+    if (Object.keys(e).length) return
+    setEditLoading(true)
+    try {
+      const res = await fetch(`/api/apps/${appId}/users/${editUser!.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editForm.name, username: editForm.username }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      setUsers(p => p.map(u => u.id === editUser!.id ? { ...u, name: data.name, username: data.username } : u))
+      toast.success('Usuário atualizado.')
+      setEditUser(null)
+    } catch { toast.error('Erro ao editar usuário.') }
+    finally { setEditLoading(false) }
   }
 
   async function handleResetPassword(userId: string, userName: string) {
@@ -532,6 +563,34 @@ function AppUsersTab({ appId, canCreate, maxUsers }: { appId: string; canCreate:
         </div>
       </Modal>
 
+      {/* Edit user modal */}
+      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Editar usuário" size="sm">
+        <form onSubmit={handleEdit} noValidate className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Nome completo</label>
+            <input type="text" maxLength={100} value={editForm.name}
+              onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            {editErrors.name && <p className="text-xs text-destructive">{editErrors.name}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Usuário</label>
+            <input type="text" maxLength={30} value={editForm.username}
+              onChange={e => setEditForm(p => ({ ...p, username: e.target.value.toLowerCase() }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            {editErrors.username && <p className="text-xs text-destructive">{editErrors.username}</p>}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={editLoading}
+              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              {editLoading ? 'Salvando...' : 'Salvar'}
+            </button>
+            <button type="button" onClick={() => setEditUser(null)}
+              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
+          </div>
+        </form>
+      </Modal>
+
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {users.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">
@@ -575,14 +634,24 @@ function AppUsersTab({ appId, canCreate, maxUsers }: { appId: string; canCreate:
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleResetPassword(u.id, u.name)}
-                        className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
-                        Reset senha
-                      </button>
-                      <button onClick={() => handleDelete(u.id)}
-                        className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
-                        Excluir
-                      </button>
+                      {canEdit && (
+                        <button onClick={() => openEdit(u)}
+                          className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-1">
+                          <Pencil className="w-3 h-3" /> Editar
+                        </button>
+                      )}
+                      {canDelete && (
+                        <>
+                          <button onClick={() => handleResetPassword(u.id, u.name)}
+                            className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                            Reset senha
+                          </button>
+                          <button onClick={() => handleDelete(u.id)}
+                            className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
+                            Excluir
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -601,6 +670,7 @@ type CollabEntry = {
   id: string
   canViewAnalytics: boolean
   canCreateUsers: boolean
+  canEditUsers: boolean
   maxUsers: number | null
   owner: { id: string; name: string; email: string }
 }
@@ -646,7 +716,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
     toast.success(isInvite ? 'Convite cancelado.' : 'Colaborador removido.')
   }
 
-  async function handlePatchPerm(collabId: string, patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'maxUsers'>>) {
+  async function handlePatchPerm(collabId: string, patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'maxUsers'>>) {
     const res = await fetch(`/api/apps/${appId}/collaborators/${collabId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
     })
@@ -711,7 +781,10 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
                   Análises
                 </span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canCreateUsers ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' : 'bg-muted text-muted-foreground line-through'}`}>
-                  Criar usuários{c.maxUsers ? ` (máx ${c.maxUsers})` : ''}
+                  Criar usuários{c.canCreateUsers && c.maxUsers ? ` (máx ${c.maxUsers})` : ''}
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canEditUsers ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'bg-muted text-muted-foreground line-through'}`}>
+                  Editar usuários
                 </span>
               </div>
 
@@ -759,12 +832,13 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
 
 function CollabPermEditor({ collab, onSave, onCancel }: {
   collab: CollabEntry
-  onSave: (patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'maxUsers'>>) => void
+  onSave: (patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'maxUsers'>>) => void
   onCancel: () => void
 }) {
   const [form, setForm] = useState({
     canViewAnalytics: collab.canViewAnalytics,
     canCreateUsers: collab.canCreateUsers,
+    canEditUsers: collab.canEditUsers,
     maxUsers: collab.maxUsers?.toString() ?? '',
   })
 
@@ -772,6 +846,7 @@ function CollabPermEditor({ collab, onSave, onCancel }: {
     onSave({
       canViewAnalytics: form.canViewAnalytics,
       canCreateUsers: form.canCreateUsers,
+      canEditUsers: form.canEditUsers,
       maxUsers: form.canCreateUsers && form.maxUsers ? parseInt(form.maxUsers) : null,
     })
   }
@@ -796,6 +871,10 @@ function CollabPermEditor({ collab, onSave, onCancel }: {
             className="w-28 h-8 px-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring" />
         </div>
       )}
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={form.canEditUsers} onChange={e => setForm(p => ({ ...p, canEditUsers: e.target.checked }))} className="rounded accent-indigo-600" />
+        Pode editar usuários (nome e usuário)
+      </label>
       <div className="flex gap-2 pt-1">
         <button onClick={handleSave}
           className="flex-1 h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors">
