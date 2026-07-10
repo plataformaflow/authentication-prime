@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     cnpj: z.string().min(1).optional(),
     cpf: z.string().min(1).optional(),
   }).refine(d => d.cnpj || d.cpf, { message: 'Informe CNPJ ou CPF.' }).safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0]?.message ?? 'Dados inválidos.' }, { status: 400 })
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.message ?? 'Dados inválidos.' }, { status: 400 })
 
   const { cnpj, cpf } = parsed.data
 

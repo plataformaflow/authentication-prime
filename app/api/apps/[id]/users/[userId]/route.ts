@@ -49,10 +49,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const user = await prisma.appUser.findUnique({ where: { id: userId }, select: { name: true } })
   if (!user) return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 })
   // Delete related records explicitly before deleting the user (old records may lack cascade metadata)
-  await prisma.accessToken.deleteMany({ where: { userId } }).catch(() => null)
-  await prisma.refreshToken.deleteMany({ where: { userId } }).catch(() => null)
-  await prisma.authorizationCode.deleteMany({ where: { userId } }).catch(() => null)
-  await prisma.authEvent.deleteMany({ where: { userId } }).catch(() => null)
+  await prisma.accessToken.deleteMany({ where: { appUserId: userId } }).catch(() => null)
+  await prisma.refreshToken.deleteMany({ where: { appUserId: userId } }).catch(() => null)
+  await prisma.authorizationCode.deleteMany({ where: { appUserId: userId } }).catch(() => null)
+  await prisma.authEvent.deleteMany({ where: { appUserId: userId } }).catch(() => null)
   await prisma.appUser.delete({ where: { id: userId } })
   await prisma.appAuditLog.create({
     data: { appId: id, actorId: session.ownerId, action: 'user.delete', targetId: userId, targetName: user.name },

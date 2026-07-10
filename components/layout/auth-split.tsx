@@ -47,7 +47,7 @@ export function AuthSplit({ children }: AuthSplitProps) {
         </div>
 
         <p className="relative text-[11px] text-white/30">
-          © {new Date().getFullYear()} Autenticação Prime
+          © {new Date().getFullYear()} Prime Aith
         </p>
       </div>
 
