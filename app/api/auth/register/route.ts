@@ -21,6 +21,37 @@ export async function POST(req: NextRequest) {
 
   const hashed = await hashPassword(password)
   const owner = await prisma.owner.create({ data: { name, email, password: hashed } })
+
+  // Resolve pending app collaborator invites for this email
+  const pendingCollabInvites = await prisma.appCollaboratorInvite.findMany({
+    where: { toEmail: email, status: 'pending' },
+  })
+  if (pendingCollabInvites.length > 0) {
+    await Promise.all(
+      pendingCollabInvites.map(inv =>
+        prisma.$transaction([
+          prisma.appCollaborator.create({ data: { appId: inv.appId, ownerId: owner.id } }),
+          prisma.appCollaboratorInvite.update({ where: { id: inv.id }, data: { status: 'accepted' } }),
+        ])
+      )
+    )
+  }
+
+  // Resolve pending company invites for this email
+  const pendingCompanyInvites = await prisma.companyInvite.findMany({
+    where: { toEmail: email, status: 'pending', type: 'invite' },
+  })
+  if (pendingCompanyInvites.length > 0) {
+    await Promise.all(
+      pendingCompanyInvites.map(inv =>
+        prisma.$transaction([
+          prisma.companyMember.create({ data: { companyId: inv.companyId, ownerId: owner.id } }),
+          prisma.companyInvite.update({ where: { id: inv.id }, data: { status: 'accepted' } }),
+        ])
+      )
+    )
+  }
+
   await setSession({ ownerId: owner.id, isAdmin: owner.isAdmin })
   return NextResponse.json({ ok: true })
 }

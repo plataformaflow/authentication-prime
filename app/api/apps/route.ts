@@ -8,12 +8,41 @@ import { withSession } from '@/lib/middleware'
 export async function GET() {
   const { session, error } = await withSession()
   if (error) return error
-  const apps = await prisma.oAuthApp.findMany({
+
+  const include = { company: { select: { id: true, name: true, logoUrl: true, cnpj: true, cpf: true } }, _count: { select: { users: true } } } as const
+
+  // Apps owned via company (owner or company member)
+  const ownedApps = await prisma.oAuthApp.findMany({
     where: { company: { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
-    include: { company: { select: { id: true, name: true } }, _count: { select: { users: true } } },
+    include,
     orderBy: { createdAt: 'desc' },
   })
-  return NextResponse.json(apps)
+  const ownedIds = new Set(ownedApps.map(a => a.id))
+
+  // Apps the user is a direct collaborator on (not already in owned set)
+  const collabEntries = await prisma.appCollaborator.findMany({
+    where: { ownerId: session.ownerId },
+    include: { app: { include } },
+  })
+
+  const collabApps = collabEntries
+    .filter(e => !ownedIds.has(e.app.id))
+    .map(e => ({
+      ...e.app,
+      _role: 'collaborator' as const,
+      _permissions: {
+        canViewAnalytics: e.canViewAnalytics,
+        canCreateUsers: e.canCreateUsers,
+        maxUsers: e.maxUsers,
+      },
+    }))
+
+  const result = [
+    ...ownedApps.map(a => ({ ...a, _role: 'owner' as const })),
+    ...collabApps,
+  ]
+
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {

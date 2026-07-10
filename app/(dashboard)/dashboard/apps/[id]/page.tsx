@@ -4,7 +4,11 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Settings, Users, BarChart3, Copy, Check, RefreshCw, Trash2, CheckCircle2, XCircle, Users2, Zap, Plus, KeyRound, AlertTriangle } from 'lucide-react'
+import {
+  Settings, Users, BarChart3, Copy, Check, RefreshCw, Trash2, CheckCircle2, XCircle,
+  Users2, Zap, Plus, KeyRound, AlertTriangle, UserPlus, X, Mail, Shield,
+  ArrowRightLeft, ImageIcon, Activity, Clock, Pencil,
+} from 'lucide-react'
 import { validateName, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
 import { ScopeBadge } from '@/components/dashboard/scope-badge'
@@ -14,85 +18,53 @@ import { RedirectUriList } from '@/components/dashboard/redirect-uri-list'
 
 const SCOPES = ['openid', 'profile', 'email']
 
+interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; maxUsers: number | null }
 interface AppDetail {
-  id: string; name: string; clientId: string; scopes: string[]; redirectUris: string[]
+  id: string; name: string; logoUrl?: string; description?: string
+  clientId?: string; scopes: string[]; redirectUris?: string[]
   company: { id: string; name: string }; createdAt: string
+  _access: 'full' | 'collaborator'
+  _permissions?: AppPerms
 }
+type Tab = 'analytics' | 'profile' | 'api' | 'users' | 'collaborators' | 'activity'
 
 export default function AppDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const [app, setApp] = useState<AppDetail | null>(null)
-  const [tab, setTab] = useState<'analytics' | 'settings' | 'users'>('analytics')
-  const [form, setForm] = useState({ name: '', redirectUris: [] as string[], scopes: [] as string[] })
-  const [formErrors, setFormErrors] = useState<FieldErrors>({})
-  const [saving, setSaving] = useState(false)
-  const [newSecret, setNewSecret] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [tab, setTab] = useState<Tab>('analytics')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     fetch(`/api/apps/${id}`).then(r => r.json()).then(d => {
-      if (!d.error) {
-        setApp(d)
-        setForm({ name: d.name, redirectUris: d.redirectUris.length > 0 ? d.redirectUris : [''], scopes: d.scopes })
-      }
+      if (!d.error) setApp(d)
     })
   }, [id])
 
-  function validateForm(): boolean {
-    const e: FieldErrors = {}
-    const nameErr = validateName(form.name, 'Nome')
-    if (nameErr) e.name = nameErr
-    const validUris = form.redirectUris.map(u => u.trim()).filter(Boolean)
-    if (validUris.length === 0) e.redirectUris = 'Adicione ao menos uma URI de redirecionamento.'
-    setFormErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  async function handleSave(ev: React.FormEvent) {
-    ev.preventDefault()
-    if (!validateForm()) return
-    setSaving(true)
-    try {
-      const redirectUris = form.redirectUris.map(u => u.trim()).filter(Boolean)
-      const res = await fetch(`/api/apps/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, redirectUris, scopes: form.scopes }) })
-      const data = await res.json()
-      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      toast.success('App atualizado!')
-      setApp(data)
-    } catch { toast.error('Erro ao salvar.') }
-    finally { setSaving(false) }
-  }
-
-  async function handleRotate() {
-    if (!confirm('Rotacionar o Client Secret invalidará integrações existentes. Continuar?')) return
-    const res = await fetch(`/api/apps/${id}/rotate-secret`, { method: 'POST' })
-    const data = await res.json()
-    if (!res.ok) { toast.error('Erro ao rotacionar.'); return }
-    setNewSecret(data.clientSecret)
-    toast.success('Secret rotacionado!')
-  }
-
   async function handleDelete() {
-    if (!confirm('Excluir app? Esta ação é irreversível.')) return
     const res = await fetch(`/api/apps/${id}`, { method: 'DELETE' })
     if (!res.ok) { toast.error('Erro ao excluir.'); return }
     toast.success('App excluído.')
     router.push('/dashboard/apps')
   }
 
-  function toggleScope(s: string) {
-    setForm(p => ({ ...p, scopes: p.scopes.includes(s) ? p.scopes.filter(x => x !== s) : [...p.scopes, s] }))
-  }
-
-  function copyClientId() {
-    if (!app) return
-    navigator.clipboard.writeText(app.clientId)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   if (!app) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Carregando...</div>
+
+  const isFull = app._access === 'full'
+  const perms = app._permissions ?? { canViewAnalytics: true, canCreateUsers: true, maxUsers: null }
+
+  const tabs: [Tab, string, React.ElementType][] = [
+    ...(isFull || perms.canViewAnalytics ? [['analytics', 'Análises', BarChart3] as [Tab, string, React.ElementType]] : []),
+    ...(isFull ? [
+      ['profile', 'Perfil', ImageIcon] as [Tab, string, React.ElementType],
+      ['api', 'API', KeyRound] as [Tab, string, React.ElementType],
+    ] : []),
+    ['users', 'Usuários', Users] as [Tab, string, React.ElementType],
+    ...(isFull ? [
+      ['collaborators', 'Colaboradores', UserPlus] as [Tab, string, React.ElementType],
+      ['activity', 'Atividade', Activity] as [Tab, string, React.ElementType],
+    ] : []),
+  ]
 
   return (
     <div className="space-y-6">
@@ -105,116 +77,360 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
         </nav>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <AppAvatar name={app.name} size="lg" />
+            <AppAvatar name={app.name} logoUrl={app.logoUrl} size="lg" />
             <div>
               <h1 className="text-2xl font-bold">{app.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs text-muted-foreground">{app.company.name}</span>
                 <span className="text-muted-foreground">·</span>
                 <div className="flex gap-1">
                   {app.scopes.map(s => <ScopeBadge key={s} scope={s} />)}
                 </div>
+                {app.description && <span className="text-xs text-muted-foreground hidden sm:inline truncate max-w-xs">{app.description}</span>}
               </div>
             </div>
           </div>
-          <button onClick={handleDelete}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors shrink-0">
-            <Trash2 className="w-3.5 h-3.5" /> Excluir
-          </button>
+          {isFull && (
+            <button onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors shrink-0">
+              <Trash2 className="w-3.5 h-3.5" /> Excluir
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border">
-        <div className="flex gap-0">
-          {([['analytics', 'Análises', BarChart3] as const, ['settings', 'Configurações', Settings] as const, ['users', 'Usuários', Users] as const]).map(([key, label, Icon]) => (
+      <div className="border-b border-border overflow-x-auto">
+        <div className="flex gap-0 min-w-max">
+          {tabs.map(([key, label, Icon]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Icon className="w-3.5 h-3.5" /> {label}
             </button>
           ))}
         </div>
       </div>
 
-      {tab === 'settings' && (
-        <div className="space-y-4">
-          {/* Credentials */}
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Credenciais</h3>
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client ID</label>
-              <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                <code className="text-sm font-mono text-foreground flex-1 truncate">{app.clientId}</code>
-                <button onClick={copyClientId} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            {newSecret && (
-              <div className="space-y-2">
-                <label className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Novo Client Secret — salve agora!
-                </label>
-                <code className="text-xs font-mono bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-3 py-2 rounded-lg block break-all text-amber-800 dark:text-amber-200">
-                  {newSecret}
-                </code>
-              </div>
-            )}
-            <button onClick={handleRotate}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-              <RefreshCw className="w-3.5 h-3.5" /> Rotacionar Client Secret
-            </button>
-          </div>
-
-          {/* Settings form */}
-          <div className="bg-card border border-border rounded-xl p-5">
-            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2"><Settings className="w-4 h-4 text-muted-foreground" /> Configurações</h3>
-            <form onSubmit={handleSave} noValidate className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Nome</label>
-                <input type="text" maxLength={100} value={form.name}
-                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">URIs de redirecionamento</label>
-                <RedirectUriList
-                  uris={form.redirectUris}
-                  onChange={uris => setForm(p => ({ ...p, redirectUris: uris }))}
-                  clientId={app.clientId}
-                  scopes={form.scopes}
-                  error={formErrors.redirectUris}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Escopos</label>
-                <div className="flex gap-3">
-                  {SCOPES.map(s => (
-                    <label key={s} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input type="checkbox" checked={form.scopes.includes(s)} onChange={() => toggleScope(s)} className="rounded accent-indigo-600" />
-                      {s}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <button type="submit" disabled={saving}
-                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60">
-                {saving ? 'Salvando...' : 'Salvar alterações'}
-              </button>
-            </form>
-          </div>
-        </div>
+      {tab === 'analytics' && <AppAnalyticsTab appId={id} />}
+      {tab === 'profile' && isFull && <AppProfileTab app={app} onUpdate={setApp} />}
+      {tab === 'api' && isFull && <AppApiTab app={app} onUpdate={setApp} />}
+      {tab === 'users' && (
+        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} maxUsers={isFull ? null : perms.maxUsers} />
+      )}
+      {tab === 'collaborators' && isFull && <AppCollaboratorsTab appId={id} />}
+      {tab === 'activity' && isFull && <AppActivityTab appId={id} />}
+      {tab === 'api' && isFull && (
+        <AppTransferSection appId={id} currentCompanyId={app.company.id} currentCompanyName={app.company.name}
+          onTransferred={(newCompany) => setApp(p => p ? { ...p, company: newCompany } : p)} />
       )}
 
-      {tab === 'users' && <AppUsersTab appId={id} />}
-      {tab === 'analytics' && <AppAnalyticsTab appId={id} />}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          name={app.name}
+          label="aplicação"
+          onConfirm={handleDelete}
+          onClose={() => setShowDeleteModal(false)}
+        />
+      )}
     </div>
   )
 }
 
-function AppUsersTab({ appId }: { appId: string }) {
-  const [users, setUsers] = useState<Array<{ id: string; name: string; username: string; mustChangePassword: boolean; createdAt: string }>>([])
+// ─── Delete Confirm Modal ────────────────────────────────────────────────────
+
+function DeleteConfirmModal({ name, label, onConfirm, onClose }: {
+  name: string; label: string
+  onConfirm: () => void; onClose: () => void
+}) {
+  const [step, setStep] = useState<1 | 2>(1)
+  const [typed, setTyped] = useState('')
+  const [confirming, setConfirming] = useState(false)
+
+  async function handleConfirm() {
+    setConfirming(true)
+    await onConfirm()
+    setConfirming(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+        <div className="h-1 bg-destructive" />
+        <div className="p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Excluir {label}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Esta ação é <strong>irreversível</strong>. Todos os dados serão perdidos.</p>
+            </div>
+          </div>
+
+          {step === 1 ? (
+            <>
+              <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 space-y-1.5">
+                <p className="text-sm font-medium text-destructive">O que será excluído:</p>
+                <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                  {label === 'aplicação' ? (
+                    <>
+                      <li>Todos os usuários da aplicação</li>
+                      <li>Tokens, códigos e sessões ativas</li>
+                      <li>Colaboradores e convites</li>
+                      <li>Histórico de atividade</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>Todas as aplicações da empresa</li>
+                      <li>Todos os usuários dessas aplicações</li>
+                      <li>Membros e convites da empresa</li>
+                      <li>Histórico de atividade</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setStep(2)}
+                  className="flex-1 h-10 rounded-xl bg-destructive hover:bg-destructive/90 text-white text-sm font-medium transition-colors">
+                  Continuar
+                </button>
+                <button onClick={onClose}
+                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Para confirmar, digite o nome da {label}:
+                </p>
+                <p className="text-sm font-semibold text-foreground bg-muted rounded-lg px-3 py-2 font-mono">{name}</p>
+                <input
+                  autoFocus
+                  type="text"
+                  value={typed}
+                  onChange={e => setTyped(e.target.value)}
+                  placeholder={`Digite "${name}"`}
+                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-destructive/50 transition-all"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleConfirm}
+                  disabled={typed !== name || confirming}
+                  className="flex-1 h-10 rounded-xl bg-destructive hover:bg-destructive/90 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  {confirming ? 'Excluindo...' : `Excluir ${label}`}
+                </button>
+                <button onClick={onClose}
+                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Profile Tab ────────────────────────────────────────────────────────────
+
+function AppProfileTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
+  const [form, setForm] = useState({ name: app.name, logoUrl: app.logoUrl ?? '', description: app.description ?? '' })
+  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<FieldErrors>({})
+
+  async function handleSave(ev: React.FormEvent) {
+    ev.preventDefault()
+    const e: FieldErrors = {}
+    const nameErr = validateName(form.name, 'Nome')
+    if (nameErr) e.name = nameErr
+    setErrors(e)
+    if (Object.keys(e).length) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/apps/${app.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name.trim(), logoUrl: form.logoUrl.trim(), description: form.description.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate({ ...app, name: data.name, logoUrl: data.logoUrl, description: data.description })
+      toast.success('Perfil atualizado!')
+    } catch { toast.error('Erro ao salvar.') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Perfil da aplicação</h3>
+
+        {/* Preview */}
+        <div className="flex items-center gap-4 p-3 bg-muted rounded-xl">
+          <AppAvatar name={form.name || app.name} logoUrl={form.logoUrl || undefined} size="lg" />
+          <div>
+            <p className="font-semibold text-sm">{form.name || '(sem nome)'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{form.description || 'Sem descrição'}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSave} noValidate className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome *</label>
+            <input type="text" maxLength={100} value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">URL do logotipo</label>
+            <input type="url" maxLength={500} value={form.logoUrl} placeholder="https://..."
+              onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição</label>
+            <textarea maxLength={500} rows={3} value={form.description} placeholder="Descrição da aplicação..."
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
+            <span className="text-xs text-muted-foreground">{form.description.length}/500</span>
+          </div>
+          <button type="submit" disabled={saving}
+            className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+            {saving ? 'Salvando...' : 'Salvar perfil'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── API Tab ─────────────────────────────────────────────────────────────────
+
+function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
+  const [form, setForm] = useState({
+    redirectUris: (app.redirectUris ?? []).length > 0 ? app.redirectUris! : [''],
+    scopes: app.scopes,
+  })
+  const [formErrors, setFormErrors] = useState<FieldErrors>({})
+  const [saving, setSaving] = useState(false)
+  const [newSecret, setNewSecret] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  function toggleScope(s: string) {
+    setForm(p => ({ ...p, scopes: p.scopes.includes(s) ? p.scopes.filter(x => x !== s) : [...p.scopes, s] }))
+  }
+
+  function copyClientId() {
+    navigator.clipboard.writeText(app.clientId ?? '')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleRotate() {
+    if (!confirm('Rotacionar o Client Secret invalidará integrações existentes. Continuar?')) return
+    const res = await fetch(`/api/apps/${app.id}/rotate-secret`, { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) { toast.error('Erro ao rotacionar.'); return }
+    setNewSecret(data.clientSecret)
+    toast.success('Secret rotacionado!')
+  }
+
+  async function handleSave(ev: React.FormEvent) {
+    ev.preventDefault()
+    const e: FieldErrors = {}
+    const validUris = form.redirectUris.map(u => u.trim()).filter(Boolean)
+    if (validUris.length === 0) e.redirectUris = 'Adicione ao menos uma URI de redirecionamento.'
+    setFormErrors(e)
+    if (Object.keys(e).length) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/apps/${app.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redirectUris: validUris, scopes: form.scopes }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate({ ...app, redirectUris: data.redirectUris, scopes: data.scopes })
+      toast.success('Configurações de API salvas!')
+    } catch { toast.error('Erro ao salvar.') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      {/* Credentials */}
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Credenciais</h3>
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client ID</label>
+          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+            <code className="text-sm font-mono text-foreground flex-1 truncate">{app.clientId}</code>
+            <button onClick={copyClientId} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+              {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        {newSecret && (
+          <div className="space-y-2">
+            <label className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> Novo Client Secret — salve agora!
+            </label>
+            <code className="text-xs font-mono bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-3 py-2 rounded-lg block break-all text-amber-800 dark:text-amber-200">
+              {newSecret}
+            </code>
+          </div>
+        )}
+        <button onClick={handleRotate}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <RefreshCw className="w-3.5 h-3.5" /> Rotacionar Client Secret
+        </button>
+      </div>
+
+      {/* API settings */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="font-semibold text-sm mb-4 flex items-center gap-2"><Settings className="w-4 h-4 text-muted-foreground" /> Configurações de API</h3>
+        <form onSubmit={handleSave} noValidate className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">URIs de redirecionamento</label>
+            <RedirectUriList
+              uris={form.redirectUris}
+              onChange={uris => setForm(p => ({ ...p, redirectUris: uris }))}
+              clientId={app.clientId}
+              scopes={form.scopes}
+              error={formErrors.redirectUris}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Escopos</label>
+            <div className="flex gap-3">
+              {SCOPES.map(s => (
+                <label key={s} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" checked={form.scopes.includes(s)} onChange={() => toggleScope(s)} className="rounded accent-indigo-600" />
+                  {s}
+                </label>
+              ))}
+            </div>
+          </div>
+          <button type="submit" disabled={saving}
+            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60">
+            {saving ? 'Salvando...' : 'Salvar configurações'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Users Tab ───────────────────────────────────────────────────────────────
+
+function AppUsersTab({ appId, canCreate, maxUsers }: { appId: string; canCreate: boolean; maxUsers: number | null }) {
+  const [users, setUsers] = useState<Array<{ id: string; name: string; username: string; mustChangePassword: boolean; createdAt: string; createdByOwner?: { id: string; name: string } | null }>>([])
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', username: '', password: '' })
   const [formErrors, setFormErrors] = useState<FieldErrors>({})
@@ -261,21 +477,21 @@ function AppUsersTab({ appId }: { appId: string }) {
     setResetLinkCopied(false)
   }
 
-  function copyResetLink() {
-    if (!resetLink) return
-    navigator.clipboard.writeText(resetLink.link)
-    setResetLinkCopied(true)
-    setTimeout(() => setResetLinkCopied(false), 2000)
-  }
+  const atLimit = maxUsers !== null && users.length >= maxUsers
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{users.length} usuário{users.length !== 1 ? 's' : ''}</p>
-        <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Novo usuário
-        </button>
+        <p className="text-sm text-muted-foreground">
+          {users.length} usuário{users.length !== 1 ? 's' : ''}
+          {maxUsers !== null && <span className="ml-1 text-xs">/ limite: {maxUsers}</span>}
+        </p>
+        {canCreate && (
+          <button onClick={() => setShowCreate(true)} disabled={atLimit}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50">
+            <Plus className="w-3.5 h-3.5" /> Novo usuário
+          </button>
+        )}
       </div>
 
       <Modal open={showCreate} onClose={() => { setShowCreate(false); setFormErrors({}) }} title="Novo usuário" description="Crie um usuário para esta aplicação" size="sm">
@@ -285,7 +501,6 @@ function AppUsersTab({ appId }: { appId: string }) {
               <label className="text-sm font-medium">{f.label}</label>
               <input type={f.type} maxLength={f.max} placeholder={f.placeholder} value={form[f.key]}
                 onChange={e => setForm(p => ({ ...p, [f.key]: f.key === 'username' ? e.target.value.toLowerCase() : e.target.value }))}
-                aria-invalid={!!formErrors[f.key]}
                 className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
               {formErrors[f.key] && <p className="text-xs text-destructive">{formErrors[f.key]}</p>}
             </div>
@@ -300,40 +515,20 @@ function AppUsersTab({ appId }: { appId: string }) {
           </div>
         </form>
       </Modal>
-      {/* Modal: Reset link */}
-      <Modal
-        open={!!resetLink}
-        onClose={() => setResetLink(null)}
-        title="Link de redefinição de senha"
-        description={resetLink ? `Gerado para ${resetLink.userName}` : ''}
-        size="sm"
-      >
+
+      <Modal open={!!resetLink} onClose={() => setResetLink(null)} title="Link de redefinição de senha"
+        description={resetLink ? `Gerado para ${resetLink.userName}` : ''} size="sm">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Copie o link abaixo e envie para o usuário. Ele expira em <strong className="text-foreground">24 horas</strong> e só pode ser usado uma vez.
+            Copie o link e envie para o usuário. Expira em <strong className="text-foreground">24 horas</strong> e só pode ser usado uma vez.
           </p>
-          <div className="bg-muted rounded-xl p-3 space-y-2">
-            <p className="text-xs font-mono break-all text-foreground leading-relaxed select-all">
-              {resetLink?.link}
-            </p>
+          <div className="bg-muted rounded-xl p-3">
+            <p className="text-xs font-mono break-all text-foreground leading-relaxed select-all">{resetLink?.link}</p>
           </div>
-          <button
-            onClick={copyResetLink}
-            className={`w-full h-10 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-              resetLinkCopied
-                ? 'bg-emerald-600 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            }`}
-          >
-            {resetLinkCopied ? (
-              <><Check className="w-4 h-4" /> Copiado!</>
-            ) : (
-              <><Copy className="w-4 h-4" /> Copiar link</>
-            )}
+          <button onClick={() => { if (!resetLink) return; navigator.clipboard.writeText(resetLink.link); setResetLinkCopied(true); setTimeout(() => setResetLinkCopied(false), 2000) }}
+            className={`w-full h-10 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${resetLinkCopied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
+            {resetLinkCopied ? <><Check className="w-4 h-4" /> Copiado!</> : <><Copy className="w-4 h-4" /> Copiar link</>}
           </button>
-          <p className="text-xs text-center text-muted-foreground">
-            O usuário precisará acessar este link para definir uma nova senha.
-          </p>
         </div>
       </Modal>
 
@@ -348,7 +543,7 @@ function AppUsersTab({ appId }: { appId: string }) {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5">Usuário</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5">Username</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5 hidden sm:table-cell">Criado por</th>
                 <th className="text-right text-xs font-semibold text-muted-foreground px-5 py-2.5">Ações</th>
               </tr>
             </thead>
@@ -360,13 +555,24 @@ function AppUsersTab({ appId }: { appId: string }) {
                       <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs font-bold">
                         {u.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium">{u.name}</span>
+                      <div>
+                        <p className="text-sm font-medium">{u.name}</p>
+                        <p className="text-xs text-muted-foreground">@{u.username}</p>
+                      </div>
                       {u.mustChangePassword && (
                         <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Trocar senha</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-sm text-muted-foreground">@{u.username}</td>
+                  <td className="px-5 py-3 hidden sm:table-cell">
+                    {u.createdByOwner ? (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Pencil className="w-3 h-3" /> {u.createdByOwner.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => handleResetPassword(u.id, u.name)}
@@ -389,6 +595,280 @@ function AppUsersTab({ appId }: { appId: string }) {
   )
 }
 
+// ─── Collaborators Tab ───────────────────────────────────────────────────────
+
+type CollabEntry = {
+  id: string
+  canViewAnalytics: boolean
+  canCreateUsers: boolean
+  maxUsers: number | null
+  owner: { id: string; name: string; email: string }
+}
+
+function AppCollaboratorsTab({ appId }: { appId: string }) {
+  const [collaborators, setCollaborators] = useState<CollabEntry[]>([])
+  const [invites, setInvites] = useState<Array<{ id: string; toEmail: string; createdAt: string }>>([])
+  const [email, setEmail] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/apps/${appId}/collaborators`).then(r => r.json()).then(d => {
+      if (d.collaborators) setCollaborators(d.collaborators)
+      if (d.invites) setInvites(d.invites)
+    })
+  }, [appId])
+
+  async function handleInvite(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!email.includes('@')) { setEmailError('E-mail inválido.'); return }
+    setEmailError('')
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/apps/${appId}/collaborators`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      setInvites(p => [data.invite, ...p.filter(i => i.id !== data.invite.id)])
+      toast.success('Convite enviado! O colaborador precisa aceitar antes de ter acesso.')
+      setEmail('')
+    } catch { toast.error('Erro ao convidar.') }
+    finally { setLoading(false) }
+  }
+
+  async function handleRemove(entryId: string, isInvite: boolean) {
+    const res = await fetch(`/api/apps/${appId}/collaborators/${entryId}`, { method: 'DELETE' })
+    if (!res.ok) { toast.error('Erro ao remover.'); return }
+    if (isInvite) setInvites(p => p.filter(i => i.id !== entryId))
+    else setCollaborators(p => p.filter(c => c.id !== entryId))
+    toast.success(isInvite ? 'Convite cancelado.' : 'Colaborador removido.')
+  }
+
+  async function handlePatchPerm(collabId: string, patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'maxUsers'>>) {
+    const res = await fetch(`/api/apps/${appId}/collaborators/${collabId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+    })
+    const data = await res.json()
+    if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+    setCollaborators(p => p.map(c => c.id === collabId ? { ...c, ...data } : c))
+    toast.success('Permissões atualizadas.')
+  }
+
+  return (
+    <div className="space-y-4 max-w-lg">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Convidar colaborador</h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Colaboradores podem gerenciar usuários e renomear esta aplicação. Configure as permissões individualmente abaixo.
+        </p>
+        <form onSubmit={handleInvite} noValidate className="flex gap-2">
+          <input type="email" placeholder="e-mail do colaborador" maxLength={255} value={email}
+            onChange={e => { setEmail(e.target.value); setEmailError('') }}
+            className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button type="submit" disabled={loading}
+            className="flex items-center gap-1.5 px-3 h-9 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60">
+            <UserPlus className="w-3.5 h-3.5" /> {loading ? '...' : 'Convidar'}
+          </button>
+        </form>
+        {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+      </div>
+
+      {collaborators.length > 0 && (
+        <div className="space-y-2">
+          {collaborators.map(c => (
+            <div key={c.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs font-bold shrink-0">
+                    {c.owner.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{c.owner.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.owner.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setEditId(editId === c.id ? null : c.id)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleRemove(c.id, false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Permission badges */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canViewAnalytics ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground line-through'}`}>
+                  Análises
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canCreateUsers ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400' : 'bg-muted text-muted-foreground line-through'}`}>
+                  Criar usuários{c.maxUsers ? ` (máx ${c.maxUsers})` : ''}
+                </span>
+              </div>
+
+              {/* Inline permission editor */}
+              {editId === c.id && (
+                <CollabPermEditor collab={c} onSave={patch => { handlePatchPerm(c.id, patch); setEditId(null) }} onCancel={() => setEditId(null)} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {invites.length > 0 && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">Convites pendentes</div>
+          {invites.map(inv => (
+            <div key={inv.id} className="flex items-center justify-between px-5 py-3 border-b border-border last:border-0">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                  <Mail className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{inv.toEmail}</p>
+                  <p className="text-xs text-muted-foreground">Aguardando aceitação</p>
+                </div>
+              </div>
+              <button onClick={() => handleRemove(inv.id, true)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {collaborators.length === 0 && invites.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          <UserPlus className="w-6 h-6 mx-auto mb-2 opacity-30" />
+          Nenhum colaborador ainda.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CollabPermEditor({ collab, onSave, onCancel }: {
+  collab: CollabEntry
+  onSave: (patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'maxUsers'>>) => void
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState({
+    canViewAnalytics: collab.canViewAnalytics,
+    canCreateUsers: collab.canCreateUsers,
+    maxUsers: collab.maxUsers?.toString() ?? '',
+  })
+
+  function handleSave() {
+    onSave({
+      canViewAnalytics: form.canViewAnalytics,
+      canCreateUsers: form.canCreateUsers,
+      maxUsers: form.canCreateUsers && form.maxUsers ? parseInt(form.maxUsers) : null,
+    })
+  }
+
+  return (
+    <div className="border-t border-border pt-3 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permissões</p>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={form.canViewAnalytics} onChange={e => setForm(p => ({ ...p, canViewAnalytics: e.target.checked }))} className="rounded accent-indigo-600" />
+        Pode ver análises
+      </label>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={form.canCreateUsers} onChange={e => setForm(p => ({ ...p, canCreateUsers: e.target.checked, maxUsers: e.target.checked ? p.maxUsers : '' }))} className="rounded accent-indigo-600" />
+        Pode criar usuários
+      </label>
+      {form.canCreateUsers && (
+        <div className="flex items-center gap-2 pl-6">
+          <label className="text-xs text-muted-foreground whitespace-nowrap">Limite de usuários</label>
+          <input type="number" min={1} max={100000} value={form.maxUsers}
+            onChange={e => setForm(p => ({ ...p, maxUsers: e.target.value }))}
+            placeholder="Sem limite"
+            className="w-28 h-8 px-2 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring" />
+        </div>
+      )}
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleSave}
+          className="flex-1 h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors">
+          Salvar
+        </button>
+        <button onClick={onCancel}
+          className="px-3 h-8 text-xs border border-border rounded-lg hover:bg-muted transition-colors">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Activity Tab ────────────────────────────────────────────────────────────
+
+const ACTION_LABELS: Record<string, string> = {
+  'user.create': 'Criou usuário',
+  'user.delete': 'Excluiu usuário',
+  'user.update': 'Editou usuário',
+  'user.reset_password': 'Resetou senha de',
+  'app.rename': 'Renomeou app para',
+  'app.update': 'Atualizou configurações',
+  'collaborator.add': 'Adicionou colaborador',
+  'collaborator.remove': 'Removeu colaborador',
+}
+
+function AppActivityTab({ appId }: { appId: string }) {
+  const [logs, setLogs] = useState<Array<{ id: string; action: string; targetName?: string; actor: { name: string; email: string }; createdAt: string }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/apps/${appId}/audit`).then(r => r.json()).then(d => { if (Array.isArray(d)) setLogs(d) }).finally(() => setLoading(false))
+  }, [appId])
+
+  if (loading) return <p className="text-sm text-muted-foreground">Carregando atividade...</p>
+
+  if (logs.length === 0) return (
+    <div className="text-center py-12 text-muted-foreground text-sm">
+      <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+      Nenhuma atividade registrada ainda.
+    </div>
+  )
+
+  return (
+    <div className="space-y-1">
+      {logs.map(log => {
+        const label = ACTION_LABELS[log.action] ?? log.action
+        const when = new Date(log.createdAt)
+        return (
+          <div key={log.id} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm">
+                <span className="font-medium">{log.actor.name}</span>
+                {' '}<span className="text-muted-foreground">{label}</span>
+                {log.targetName && <span className="font-medium"> {log.targetName}</span>}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {when.toLocaleDateString('pt-BR')} às {when.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Analytics Tab ───────────────────────────────────────────────────────────
+
 function AppAnalyticsTab({ appId }: { appId: string }) {
   const [data, setData] = useState<{ loginSuccess: number; loginFailed: number; tokenIssued: number; activeUsers: number; totalUsers: number; successRate: number } | null>(null)
 
@@ -404,6 +884,92 @@ function AppAnalyticsTab({ appId }: { appId: string }) {
       <StatCard label="Usuários ativos (30d)" value={data.activeUsers} icon={Users2} iconColor="text-indigo-600" iconBg="bg-indigo-100 dark:bg-indigo-900/40" />
       <StatCard label="Total de usuários" value={data.totalUsers} icon={Users} iconColor="text-violet-600" iconBg="bg-violet-100 dark:bg-violet-900/40" />
       <StatCard label="Taxa de sucesso" value={`${data.successRate}%`} icon={CheckCircle2} iconColor="text-teal-600" iconBg="bg-teal-100 dark:bg-teal-900/40" />
+    </div>
+  )
+}
+
+// ─── Transfer Section ────────────────────────────────────────────────────────
+
+function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTransferred }: {
+  appId: string
+  currentCompanyId: string
+  currentCompanyName: string
+  onTransferred: (company: { id: string; name: string }) => void
+}) {
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string; role: string }>>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState<{ toCompany: { id: string; name: string }; status: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/companies').then(r => r.json()).then(d => { if (Array.isArray(d)) setCompanies(d.filter((c: { id: string }) => c.id !== currentCompanyId)) })
+    fetch(`/api/apps/${appId}/transfer`).then(r => r.json()).then(d => { if (d && d.status) setPendingRequest(d) })
+  }, [appId, currentCompanyId])
+
+  async function handleTransfer(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!selectedCompanyId) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/apps/${appId}/transfer`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toCompanyId: selectedCompanyId }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      if (data.transferred) {
+        toast.success('Aplicação transferida!')
+        onTransferred(data.app.company)
+        setSelectedCompanyId('')
+      } else {
+        setPendingRequest(data.request)
+        toast.success('Solicitação enviada! Aguardando aprovação do dono da empresa destino.')
+      }
+    } catch { toast.error('Erro ao transferir.') }
+    finally { setLoading(false) }
+  }
+
+  async function handleCancelRequest() {
+    const res = await fetch(`/api/apps/${appId}/transfer`, { method: 'DELETE' })
+    if (!res.ok) { toast.error('Erro ao cancelar.'); return }
+    setPendingRequest(null)
+    toast.success('Solicitação cancelada.')
+  }
+
+  return (
+    <div className="bg-card border border-amber-200 dark:border-amber-800 rounded-xl p-5 space-y-4 max-w-lg">
+      <div className="flex items-center gap-2">
+        <ArrowRightLeft className="w-4 h-4 text-amber-600" />
+        <h3 className="text-sm font-semibold">Transferir aplicação</h3>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Mova para outra empresa. Se pertencer a outro dono, ele precisará aprovar.
+        <br />Empresa atual: <strong className="text-foreground">{currentCompanyName}</strong>
+      </p>
+      {pendingRequest ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Aguardando aprovação de <strong className="ml-1">{pendingRequest.toCompany.name}</strong>
+          </div>
+          <button onClick={handleCancelRequest} className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            Cancelar solicitação
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleTransfer} className="flex gap-2">
+          <select value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}
+            className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">Selecione a empresa destino...</option>
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name} {c.role !== 'owner' ? '(requer aprovação)' : ''}</option>
+            ))}
+          </select>
+          <button type="submit" disabled={!selectedCompanyId || loading}
+            className="flex items-center gap-1.5 px-3 h-9 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50">
+            <ArrowRightLeft className="w-3.5 h-3.5" /> {loading ? '...' : 'Transferir'}
+          </button>
+        </form>
+      )}
     </div>
   )
 }

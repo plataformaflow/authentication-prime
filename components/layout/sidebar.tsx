@@ -40,8 +40,8 @@ export function Sidebar({ userName, userEmail, isAdmin }: SidebarProps) {
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight truncate text-[--sidebar-foreground]">Autenticação Prime</p>
-            <p className="text-[10px] text-[--sidebar-foreground]/50 truncate">OAuth2 Server</p>
+            <p className="text-sm font-semibold leading-tight truncate text-[--sidebar-foreground]">Prime Auth</p>
+            <p className="text-[10px] text-[--sidebar-foreground]/50 truncate">Central de Autenticação</p>
           </div>
         )}
         <button

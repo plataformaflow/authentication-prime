@@ -11,7 +11,7 @@ import { StatCard } from '@/components/dashboard/stat-card'
 import { AuthLineChart, AppBarChart } from '@/components/dashboard/analytics-charts'
 
 interface CompanyDetail {
-  id: string; name: string; cnpj: string; logoUrl?: string; description?: string; role: string
+  id: string; name: string; cnpj?: string; cpf?: string; logoUrl?: string; description?: string; role: string
   apps: Array<{ id: string; name: string; _count: { users: number; authEvents: number } }>
   members: Array<{ id: string; owner: { id: string; name: string; email: string } }>
 }
@@ -103,6 +103,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
               <h1 className="text-2xl font-bold text-foreground">{company.name}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {company.cnpj && <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">CNPJ: {company.cnpj}</span>}
+                {company.cpf && <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">CPF: {company.cpf}</span>}
                 <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 rounded-full text-indigo-700 dark:text-indigo-400">
                   {company.apps.length} aplicaç{company.apps.length !== 1 ? 'ões' : 'ão'}
                 </span>

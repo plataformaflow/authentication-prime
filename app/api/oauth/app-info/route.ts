@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     appName: app.name,
     companyName: app.company.name,
-    logoUrl: app.company.logoUrl,
+    companyLogoUrl: app.company.logoUrl ?? null,
+    appLogoUrl: app.logoUrl ?? null,
     appId: app.id,
   })
 }
