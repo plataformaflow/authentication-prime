@@ -10,7 +10,7 @@ async function getAppAccess(appId: string, ownerId: string): Promise<{ ok: boole
   if (byCompany) return { ok: true, isOwner: true, canEdit: true, canDelete: true }
   const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId } } })
   if (!collab) return { ok: false, isOwner: false, canEdit: false, canDelete: false }
-  return { ok: true, isOwner: false, canEdit: collab.canEditUsers, canDelete: false }
+  return { ok: true, isOwner: false, canEdit: collab.canEditUsers, canDelete: collab.canDeleteUsers ?? false }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string; userId: string }> }) {

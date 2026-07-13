@@ -44,10 +44,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!app) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   const body = await req.json().catch(() => null)
-  const parsed = z.object({ toCompanyId: z.string().min(1) }).safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
+  const parsed = z.object({
+    toCompanyId: z.string().min(1).optional(),
+    cnpj: z.string().min(1).optional(),
+    cpf: z.string().min(1).optional(),
+  }).refine(d => d.toCompanyId || d.cnpj || d.cpf, { message: 'Informe a empresa destino.' }).safeParse(body)
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0]?.message ?? 'Dados inválidos.' }, { status: 400 })
 
-  const { toCompanyId } = parsed.data
+  let toCompanyId = parsed.data.toCompanyId
+  if (!toCompanyId) {
+    const formatCNPJ = (r: string) => r.replace(/[^\d]/g, '').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+    const formatCPF = (r: string) => r.replace(/[^\d]/g, '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
+    const found = parsed.data.cnpj
+      ? await prisma.company.findFirst({ where: { cnpj: formatCNPJ(parsed.data.cnpj) } })
+      : await prisma.company.findFirst({ where: { cpf: formatCPF(parsed.data.cpf!) } })
+    if (!found) return NextResponse.json({ error: 'Empresa não encontrada com este documento.' }, { status: 404 })
+    toCompanyId = found.id
+  }
 
   if (toCompanyId === app.companyId) {
     return NextResponse.json({ error: 'A aplicação já pertence a esta empresa.' }, { status: 400 })

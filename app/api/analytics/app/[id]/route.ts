@@ -23,7 +23,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const app = await prisma.oAuthApp.findFirst({
     where: { id: appId, company: { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
   })
-  if (!app) return NextResponse.json({ error: 'App não encontrado.' }, { status: 404 })
+  if (!app) {
+    const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId: session.ownerId } } })
+    if (!collab || !collab.canViewAnalytics) return NextResponse.json({ error: 'App nao encontrado.' }, { status: 404 })
+  }
   const since = daysAgo(30)
   const events = await prisma.authEvent.findMany({
     where: { appId, createdAt: { gte: since } },

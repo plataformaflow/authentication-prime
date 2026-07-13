@@ -26,6 +26,7 @@ export async function PATCH(
     canViewAnalytics: z.boolean().optional(),
     canCreateUsers: z.boolean().optional(),
     canEditUsers: z.boolean().optional(),
+    canDeleteUsers: z.boolean().optional(),
     maxUsers: z.number().int().min(1).nullable().optional(),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
@@ -39,6 +40,7 @@ export async function PATCH(
       ...(parsed.data.canViewAnalytics !== undefined ? { canViewAnalytics: parsed.data.canViewAnalytics } : {}),
       ...(parsed.data.canCreateUsers !== undefined ? { canCreateUsers: parsed.data.canCreateUsers } : {}),
       ...(parsed.data.canEditUsers !== undefined ? { canEditUsers: parsed.data.canEditUsers } : {}),
+      ...(parsed.data.canDeleteUsers !== undefined ? { canDeleteUsers: parsed.data.canDeleteUsers } : {}),
       ...(parsed.data.maxUsers !== undefined ? { maxUsers: parsed.data.maxUsers } : {}),
     },
     include: { owner: { select: { id: true, name: true, email: true } } },

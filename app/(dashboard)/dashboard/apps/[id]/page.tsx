@@ -18,7 +18,7 @@ import { RedirectUriList } from '@/components/dashboard/redirect-uri-list'
 
 const SCOPES = ['openid', 'profile', 'email']
 
-interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; maxUsers: number | null }
+interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null }
 interface AppDetail {
   id: string; name: string; logoUrl?: string; description?: string
   clientId?: string; scopes: string[]; redirectUris?: string[]
@@ -51,7 +51,7 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
   if (!app) return <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Carregando...</div>
 
   const isFull = app._access === 'full'
-  const perms = app._permissions ?? { canViewAnalytics: true, canCreateUsers: true, canEditUsers: true, maxUsers: null }
+  const perms = app._permissions ?? { canViewAnalytics: true, canCreateUsers: true, canEditUsers: true, canDeleteUsers: true, maxUsers: null }
 
   const tabs: [Tab, string, React.ElementType][] = [
     ...(isFull || perms.canViewAnalytics ? [['analytics', 'Análises', BarChart3] as [Tab, string, React.ElementType]] : []),
@@ -113,7 +113,7 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
       {tab === 'profile' && <AppProfileTab app={app} onUpdate={setApp} />}
       {tab === 'api' && isFull && <AppApiTab app={app} onUpdate={setApp} />}
       {tab === 'users' && (
-        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull} maxUsers={isFull ? null : perms.maxUsers} />
+        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull || perms.canDeleteUsers} maxUsers={isFull ? null : perms.maxUsers} />
       )}
       {tab === 'collaborators' && isFull && <AppCollaboratorsTab appId={id} />}
       {tab === 'activity' && isFull && <AppActivityTab appId={id} />}
@@ -640,17 +640,17 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
                           <Pencil className="w-3 h-3" /> Editar
                         </button>
                       )}
+                      {(canEdit || canDelete) && (
+                        <button onClick={() => handleResetPassword(u.id, u.name)}
+                          className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                          Reset senha
+                        </button>
+                      )}
                       {canDelete && (
-                        <>
-                          <button onClick={() => handleResetPassword(u.id, u.name)}
-                            className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
-                            Reset senha
-                          </button>
-                          <button onClick={() => handleDelete(u.id)}
-                            className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
-                            Excluir
-                          </button>
-                        </>
+                        <button onClick={() => handleDelete(u.id)}
+                          className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
+                          Excluir
+                        </button>
                       )}
                     </div>
                   </td>
@@ -671,6 +671,7 @@ type CollabEntry = {
   canViewAnalytics: boolean
   canCreateUsers: boolean
   canEditUsers: boolean
+  canDeleteUsers: boolean
   maxUsers: number | null
   owner: { id: string; name: string; email: string }
 }
@@ -716,7 +717,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
     toast.success(isInvite ? 'Convite cancelado.' : 'Colaborador removido.')
   }
 
-  async function handlePatchPerm(collabId: string, patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'maxUsers'>>) {
+  async function handlePatchPerm(collabId: string, patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'canDeleteUsers' | 'maxUsers'>>) {
     const res = await fetch(`/api/apps/${appId}/collaborators/${collabId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
     })
@@ -786,6 +787,9 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canEditUsers ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'bg-muted text-muted-foreground line-through'}`}>
                   Editar usuários
                 </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${c.canDeleteUsers ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400' : 'bg-muted text-muted-foreground line-through'}`}>
+                  Excluir usuários
+                </span>
               </div>
 
               {/* Inline permission editor */}
@@ -832,13 +836,14 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
 
 function CollabPermEditor({ collab, onSave, onCancel }: {
   collab: CollabEntry
-  onSave: (patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'maxUsers'>>) => void
+  onSave: (patch: Partial<Pick<CollabEntry, 'canViewAnalytics' | 'canCreateUsers' | 'canEditUsers' | 'canDeleteUsers' | 'maxUsers'>>) => void
   onCancel: () => void
 }) {
   const [form, setForm] = useState({
-    canViewAnalytics: collab.canViewAnalytics,
-    canCreateUsers: collab.canCreateUsers,
-    canEditUsers: collab.canEditUsers,
+    canViewAnalytics: collab.canViewAnalytics ?? true,
+    canCreateUsers: collab.canCreateUsers ?? false,
+    canEditUsers: collab.canEditUsers ?? false,
+    canDeleteUsers: collab.canDeleteUsers ?? false,
     maxUsers: collab.maxUsers?.toString() ?? '',
   })
 
@@ -847,6 +852,7 @@ function CollabPermEditor({ collab, onSave, onCancel }: {
       canViewAnalytics: form.canViewAnalytics,
       canCreateUsers: form.canCreateUsers,
       canEditUsers: form.canEditUsers,
+      canDeleteUsers: form.canDeleteUsers,
       maxUsers: form.canCreateUsers && form.maxUsers ? parseInt(form.maxUsers) : null,
     })
   }
@@ -874,6 +880,10 @@ function CollabPermEditor({ collab, onSave, onCancel }: {
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <input type="checkbox" checked={form.canEditUsers} onChange={e => setForm(p => ({ ...p, canEditUsers: e.target.checked }))} className="rounded accent-indigo-600" />
         Pode editar usuários (nome e usuário)
+      </label>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={form.canDeleteUsers} onChange={e => setForm(p => ({ ...p, canDeleteUsers: e.target.checked }))} className="rounded accent-indigo-600" />
+        Pode excluir usuários
       </label>
       <div className="flex gap-2 pt-1">
         <button onClick={handleSave}
@@ -977,8 +987,11 @@ function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTra
 }) {
   const [companies, setCompanies] = useState<Array<{ id: string; name: string; role: string }>>([])
   const [selectedCompanyId, setSelectedCompanyId] = useState('')
+  const [otherDoc, setOtherDoc] = useState<{ type: 'cnpj' | 'cpf'; value: string }>({ type: 'cnpj', value: '' })
   const [loading, setLoading] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<{ toCompany: { id: string; name: string }; status: string } | null>(null)
+
+  const isOther = selectedCompanyId === '__other__'
 
   useEffect(() => {
     fetch('/api/companies').then(r => r.json()).then(d => { if (Array.isArray(d)) setCompanies(d.filter((c: { id: string }) => c.id !== currentCompanyId)) })
@@ -988,10 +1001,14 @@ function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTra
   async function handleTransfer(ev: React.FormEvent) {
     ev.preventDefault()
     if (!selectedCompanyId) return
+    if (isOther && !otherDoc.value.trim()) return
     setLoading(true)
     try {
+      const body = isOther
+        ? { [otherDoc.type]: otherDoc.value.trim() }
+        : { toCompanyId: selectedCompanyId }
       const res = await fetch(`/api/apps/${appId}/transfer`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toCompanyId: selectedCompanyId }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
@@ -999,6 +1016,7 @@ function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTra
         toast.success('Aplicação transferida!')
         onTransferred(data.app.company)
         setSelectedCompanyId('')
+        setOtherDoc({ type: 'cnpj', value: '' })
       } else {
         setPendingRequest(data.request)
         toast.success('Solicitação enviada! Aguardando aprovação do dono da empresa destino.')
@@ -1013,6 +1031,8 @@ function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTra
     setPendingRequest(null)
     toast.success('Solicitação cancelada.')
   }
+
+  const canSubmit = selectedCompanyId && (!isOther || otherDoc.value.trim().length >= 11)
 
   return (
     <div className="bg-card border border-amber-200 dark:border-amber-800 rounded-xl p-5 space-y-4 max-w-lg">
@@ -1035,18 +1055,48 @@ function AppTransferSection({ appId, currentCompanyId, currentCompanyName, onTra
           </button>
         </div>
       ) : (
-        <form onSubmit={handleTransfer} className="flex gap-2">
-          <select value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}
-            className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">Selecione a empresa destino...</option>
-            {companies.map(c => (
-              <option key={c.id} value={c.id}>{c.name} {c.role !== 'owner' ? '(requer aprovação)' : ''}</option>
-            ))}
-          </select>
-          <button type="submit" disabled={!selectedCompanyId || loading}
-            className="flex items-center gap-1.5 px-3 h-9 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50">
-            <ArrowRightLeft className="w-3.5 h-3.5" /> {loading ? '...' : 'Transferir'}
-          </button>
+        <form onSubmit={handleTransfer} className="space-y-3">
+          <div className="flex gap-2">
+            <select value={selectedCompanyId} onChange={e => { setSelectedCompanyId(e.target.value); setOtherDoc({ type: 'cnpj', value: '' }) }}
+              className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              <option value="">Selecione a empresa destino...</option>
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>{c.name} {c.role !== 'owner' ? '(requer aprovação)' : ''}</option>
+              ))}
+              <option value="__other__">Outra empresa...</option>
+            </select>
+            <button type="submit" disabled={!canSubmit || loading}
+              className="flex items-center gap-1.5 px-3 h-9 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50">
+              <ArrowRightLeft className="w-3.5 h-3.5" /> {loading ? '...' : 'Transferir'}
+            </button>
+          </div>
+
+          {isOther && (
+            <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">Informe o documento da empresa destino:</p>
+              <div className="flex gap-2">
+                <div className="flex rounded-lg border border-input overflow-hidden text-xs">
+                  <button type="button" onClick={() => setOtherDoc(p => ({ ...p, type: 'cnpj', value: '' }))}
+                    className={`px-3 py-1.5 transition-colors ${otherDoc.type === 'cnpj' ? 'bg-amber-600 text-white' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
+                    CNPJ
+                  </button>
+                  <button type="button" onClick={() => setOtherDoc(p => ({ ...p, type: 'cpf', value: '' }))}
+                    className={`px-3 py-1.5 transition-colors ${otherDoc.type === 'cpf' ? 'bg-amber-600 text-white' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
+                    CPF
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  autoFocus
+                  value={otherDoc.value}
+                  onChange={e => setOtherDoc(p => ({ ...p, value: e.target.value }))}
+                  placeholder={otherDoc.type === 'cnpj' ? '00.000.000/0000-00' : '000.000.000-00'}
+                  className="flex-1 h-8 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground">A transferência será solicitada ao dono da empresa encontrada.</p>
+            </div>
+          )}
         </form>
       )}
     </div>

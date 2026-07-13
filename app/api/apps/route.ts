@@ -34,6 +34,7 @@ export async function GET() {
         canViewAnalytics: e.canViewAnalytics,
         canCreateUsers: e.canCreateUsers,
         canEditUsers: e.canEditUsers,
+        canDeleteUsers: e.canDeleteUsers ?? false,
         maxUsers: e.maxUsers,
       },
     }))

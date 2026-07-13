@@ -96,6 +96,7 @@ model AppCollaborator {
   canViewAnalytics Boolean  @default(true)
   canCreateUsers   Boolean  @default(false)
   canEditUsers     Boolean  @default(false)
+  canDeleteUsers   Boolean  @default(false)
   maxUsers         Int?
   createdAt        DateTime @default(now())
 

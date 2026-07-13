@@ -14,7 +14,7 @@ import { RedirectUriList } from '@/components/dashboard/redirect-uri-list'
 const SCOPES = ['openid', 'profile', 'email']
 
 interface CompanyInfo { id: string; name: string; logoUrl?: string | null; cnpj?: string | null; cpf?: string | null }
-interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; maxUsers: number | null }
+interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null }
 interface App {
   id: string; name: string; clientId: string; logoUrl?: string | null
   company: CompanyInfo; _count: { users: number }; scopes: string[]
@@ -380,6 +380,9 @@ function AppCard({ app }: { app: App }) {
           </span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full ${app._permissions.canEditUsers ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'bg-muted text-muted-foreground line-through'}`}>
             Editar usuários
+          </span>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full ${app._permissions.canDeleteUsers ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400' : 'bg-muted text-muted-foreground line-through'}`}>
+            Excluir usuários
           </span>
         </div>
       )}
