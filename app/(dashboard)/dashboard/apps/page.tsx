@@ -135,14 +135,14 @@ export default function AppsPage() {
         subtitle={`${apps.length} aplicaç${apps.length !== 1 ? 'ões' : 'ão'} cadastrada${apps.length !== 1 ? 's' : ''}`}
         action={
           <button onClick={() => { setShowCreate(true); setCreatedSecret('') }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
             <Plus className="w-3.5 h-3.5" /> Nova aplicação
           </button>
         }
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
         {([['apps', 'Aplicações'], ['invites', `Convites${invites.length > 0 ? ` (${invites.length})` : ''}`]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
@@ -234,13 +234,13 @@ export default function AppsPage() {
             <label className="text-sm font-medium">Nome *</label>
             <input type="text" maxLength={100} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
               placeholder="Minha aplicação"
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Empresa *</label>
             <select value={form.companyId} onChange={e => setForm(p => ({ ...p, companyId: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all">
               <option value="">Selecionar...</option>
               {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -268,11 +268,11 @@ export default function AppsPage() {
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar aplicação'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
-              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
           </div>
         </form>
       </Modal>
@@ -419,7 +419,7 @@ function InvitesTab({ invites, onAction }: {
   return (
     <div className="space-y-3">
       {invites.map(invite => (
-        <div key={invite.id} className="flex items-start gap-4 bg-card border border-border rounded-xl p-4">
+        <div key={invite.id} className="flex flex-col sm:flex-row items-start gap-4 bg-card border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 shrink-0">
             {/* Company logo */}
             <div className="w-9 h-9 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
@@ -440,7 +440,7 @@ function InvitesTab({ invites, onAction }: {
             </p>
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 sm:shrink-0 sm:ml-auto">
             <button onClick={() => onAction(invite.id, invite.app.id, 'accept')}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
               <CheckCircle2 className="w-3.5 h-3.5" /> Aceitar

@@ -35,24 +35,27 @@ export function UserMenu({ name, email }: UserMenuProps) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(p => !p)}
-        className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1"
+        className="w-8 h-8 rounded-full bg-[#1a2f6b] flex items-center justify-center text-white text-xs font-bold hover:bg-[#152560] transition-colors focus:outline-none focus:ring-2 focus:ring-[#1a2f6b]/40 focus:ring-offset-1"
       >
         {name.charAt(0).toUpperCase()}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-56 bg-card border border-border rounded-xl shadow-lg py-1 overflow-hidden">
+        <div className="absolute right-0 top-11 z-50 w-56 bg-card border border-border rounded-2xl shadow-xl shadow-[#1a2550]/10 dark:shadow-black/30 overflow-hidden">
+          <div className="h-0.5 bg-[#d4a847]" />
           <div className="px-4 py-3 border-b border-border">
-            <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+            <p className="text-sm font-semibold text-[#1a2550] dark:text-foreground truncate">{name}</p>
             <p className="text-xs text-muted-foreground truncate">{email}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </button>
+          <div className="py-1">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-destructive hover:bg-destructive/8 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -96,11 +96,11 @@ export default function CompaniesPage() {
         action={
           <>
             <button onClick={() => setShowRequest(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
               <Search className="w-3.5 h-3.5" /> Solicitar acesso
             </button>
             <button onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
               <Plus className="w-3.5 h-3.5" /> Nova empresa
             </button>
           </>
@@ -111,16 +111,16 @@ export default function CompaniesPage() {
       <Modal open={showCreate} onClose={() => { setShowCreate(false); setFormErrors({}) }} title="Nova empresa" description="Preencha os dados para criar uma empresa">
         <form onSubmit={handleCreate} noValidate className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Nome *</label>
+            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">Nome *</label>
             <input type="text" maxLength={100} value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
               placeholder="Nome da empresa"
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">{form.docType === 'cnpj' ? 'CNPJ' : 'CPF'} *</label>
+              <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">{form.docType === 'cnpj' ? 'CNPJ' : 'CPF'} *</label>
               <div className="flex rounded-lg border border-input overflow-hidden text-xs">
                 <button type="button" onClick={() => setForm(p => ({ ...p, docType: 'cnpj' }))}
                   className={`px-2.5 py-1 transition-colors ${form.docType === 'cnpj' ? 'bg-indigo-600 text-white' : 'hover:bg-muted text-muted-foreground'}`}>
@@ -136,41 +136,41 @@ export default function CompaniesPage() {
               <input type="text" maxLength={18} value={form.cnpj}
                 onChange={e => setForm(p => ({ ...p, cnpj: e.target.value }))}
                 placeholder="00.000.000/0001-00"
-                className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             ) : (
               <input type="text" maxLength={14} value={form.cpf}
                 onChange={e => setForm(p => ({ ...p, cpf: e.target.value }))}
                 placeholder="000.000.000-00"
-                className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             )}
             {formErrors.cnpj && <p className="text-xs text-destructive">{formErrors.cnpj}</p>}
             {formErrors.cpf && <p className="text-xs text-destructive">{formErrors.cpf}</p>}
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">URL do logotipo</label>
+            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">URL do logotipo</label>
             <input type="url" maxLength={500} value={form.logoUrl}
               onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
               placeholder="https://..."
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {formErrors.logoUrl && <p className="text-xs text-destructive">{formErrors.logoUrl}</p>}
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Descrição</label>
+            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">Descrição</label>
             <textarea maxLength={500} value={form.description} rows={3}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
               placeholder="Descrição da empresa..."
-              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+              className="w-full px-3 py-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 resize-none transition-all" />
             <div className="flex justify-end">
               <span className="text-xs text-muted-foreground">{form.description.length}/500</span>
             </div>
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar empresa'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
-              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
               Cancelar
             </button>
           </div>
@@ -182,7 +182,7 @@ export default function CompaniesPage() {
         <form onSubmit={handleRequest} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">{requestDoc.type === 'cnpj' ? 'CNPJ' : 'CPF'} da empresa</label>
+              <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">{requestDoc.type === 'cnpj' ? 'CNPJ' : 'CPF'} da empresa</label>
               <div className="flex rounded-lg border border-input overflow-hidden text-xs">
                 <button type="button" onClick={() => setRequestDoc(p => ({ ...p, type: 'cnpj', value: '' }))}
                   className={`px-2.5 py-1 transition-colors ${requestDoc.type === 'cnpj' ? 'bg-indigo-600 text-white' : 'hover:bg-muted text-muted-foreground'}`}>
@@ -199,16 +199,16 @@ export default function CompaniesPage() {
               maxLength={requestDoc.type === 'cnpj' ? 18 : 14}
               value={requestDoc.value}
               onChange={e => setRequestDoc(p => ({ ...p, value: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all"
             />
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={loading}
-              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
               {loading ? 'Enviando...' : 'Solicitar'}
             </button>
             <button type="button" onClick={() => { setShowRequest(false); setRequestDoc({ type: 'cnpj', value: '' }) }}
-              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
               Cancelar
             </button>
           </div>
@@ -270,7 +270,7 @@ function CompanyCard({ company: c, onDelete }: {
   onDelete?: () => void
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-3 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors">
+    <div className="bg-card border border-border rounded-2xl p-5 space-y-3 shadow-sm shadow-[#1a2550]/5 hover:shadow-md hover:shadow-[#1a2550]/8 hover:border-[#c4d2f2] dark:hover:border-indigo-800 transition-all">
       <div className="flex items-center gap-3">
         <AppAvatar name={c.name} logoUrl={c.logoUrl} size="md" className="rounded-xl" />
         <div className="min-w-0">

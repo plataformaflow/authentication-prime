@@ -38,80 +38,96 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-gold: var(--gold);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
+
+  /* Remap indigo → Prime Auth navy palette */
+  --color-indigo-50:  #f0f3fb;
+  --color-indigo-100: #e0e8f8;
+  --color-indigo-200: #c4d2f2;
+  --color-indigo-300: #95aeea;
+  --color-indigo-400: #4d6ec0;
+  --color-indigo-500: #2a4a9a;
+  --color-indigo-600: #1a2f6b;
+  --color-indigo-700: #152560;
+  --color-indigo-800: #101c4a;
+  --color-indigo-900: #0d1535;
+  --color-indigo-950: #080e22;
 }
 
 :root {
-  --background: #f8f9fb;
+  --background: #f1f4fb;
   --foreground: #0f1117;
   --card: #ffffff;
   --card-foreground: #0f1117;
   --popover: #ffffff;
   --popover-foreground: #0f1117;
-  --primary: #6366f1;
+  --primary: #1a2f6b;
   --primary-foreground: #ffffff;
-  --secondary: #f1f2f6;
+  --secondary: #e6ebf7;
   --secondary-foreground: #0f1117;
-  --muted: #f1f2f6;
-  --muted-foreground: #64748b;
-  --accent: #f1f2f6;
+  --muted: #e8eef8;
+  --muted-foreground: #60718f;
+  --accent: #e8eef8;
   --accent-foreground: #0f1117;
-  --destructive: #ef4444;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #6366f1;
-  --chart-1: #6366f1;
-  --chart-2: #ef4444;
+  --destructive: #e53e3e;
+  --border: #dce5f5;
+  --input: #dce5f5;
+  --ring: #1a2f6b;
+  --gold: #d4a847;
+  --chart-1: #1a2f6b;
+  --chart-2: #e53e3e;
   --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #8b5cf6;
+  --chart-4: #d4a847;
+  --chart-5: #7c3aed;
   --radius: 0.75rem;
-  --sidebar: #0f1117;
-  --sidebar-foreground: #f8f9fb;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255,255,255,0.06);
-  --sidebar-accent-foreground: #f8f9fb;
-  --sidebar-border: rgba(255,255,255,0.08);
-  --sidebar-ring: #6366f1;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a2550;
+  --sidebar-primary: #d4a847;
+  --sidebar-primary-foreground: #1a2550;
+  --sidebar-accent: rgba(26,45,80,0.06);
+  --sidebar-accent-foreground: #1a2550;
+  --sidebar-border: #dce5f5;
+  --sidebar-ring: #1a2f6b;
 }
 
 .dark {
-  --background: #0f1117;
-  --foreground: #f8f9fb;
-  --card: #1a1d27;
-  --card-foreground: #f8f9fb;
-  --popover: #1a1d27;
-  --popover-foreground: #f8f9fb;
-  --primary: #6366f1;
+  --background: #0a0c14;
+  --foreground: #eef1f9;
+  --card: #111320;
+  --card-foreground: #eef1f9;
+  --popover: #111320;
+  --popover-foreground: #eef1f9;
+  --primary: #2a4a9a;
   --primary-foreground: #ffffff;
-  --secondary: #1e2130;
-  --secondary-foreground: #f8f9fb;
-  --muted: #1e2130;
-  --muted-foreground: #64748b;
-  --accent: #1e2130;
-  --accent-foreground: #f8f9fb;
+  --secondary: #181b2c;
+  --secondary-foreground: #eef1f9;
+  --muted: #181b2c;
+  --muted-foreground: #7a8db0;
+  --accent: #181b2c;
+  --accent-foreground: #eef1f9;
   --destructive: #ef4444;
   --border: rgba(255,255,255,0.08);
   --input: rgba(255,255,255,0.08);
-  --ring: #6366f1;
-  --chart-1: #6366f1;
+  --ring: #4d6ec0;
+  --gold: #d4a847;
+  --chart-1: #4d6ec0;
   --chart-2: #ef4444;
   --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #8b5cf6;
-  --sidebar: #0a0c12;
-  --sidebar-foreground: #f8f9fb;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
+  --chart-4: #d4a847;
+  --chart-5: #7c3aed;
+  --sidebar: #0d0f1c;
+  --sidebar-foreground: #eef1f9;
+  --sidebar-primary: #d4a847;
+  --sidebar-primary-foreground: #0d0f1c;
   --sidebar-accent: rgba(255,255,255,0.06);
-  --sidebar-accent-foreground: #f8f9fb;
-  --sidebar-border: rgba(255,255,255,0.08);
-  --sidebar-ring: #6366f1;
+  --sidebar-accent-foreground: #eef1f9;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-ring: #d4a847;
 }
 
 @layer base {
@@ -121,5 +137,26 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-geist), system-ui, sans-serif;
+  }
+
+  /* Smooth theme transitions — only on color/bg properties, not layout */
+  *, *::before, *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
+    transition-duration: 180ms;
+    transition-timing-function: ease;
+  }
+  /* Opt-out for elements that have their own explicit transitions */
+  [data-no-theme-transition],
+  [data-no-theme-transition] * {
+    transition: none !important;
+  }
+
+  /* Form element baseline — always use card bg so inputs don't pick up the page tint */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    background-color: var(--card);
+    border-color: var(--input);
+    color: var(--foreground);
   }
 }

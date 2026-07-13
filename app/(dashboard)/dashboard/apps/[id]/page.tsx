@@ -194,7 +194,7 @@ function DeleteConfirmModal({ name, label, onConfirm, onClose }: {
                   Continuar
                 </button>
                 <button onClick={onClose}
-                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-colors">
+                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-all">
                   Cancelar
                 </button>
               </div>
@@ -223,7 +223,7 @@ function DeleteConfirmModal({ name, label, onConfirm, onClose }: {
                   {confirming ? 'Excluindo...' : `Excluir ${label}`}
                 </button>
                 <button onClick={onClose}
-                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-colors">
+                  className="px-4 h-10 rounded-xl border border-border text-sm hover:bg-muted transition-all">
                   Cancelar
                 </button>
               </div>
@@ -265,7 +265,7 @@ function AppProfileTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDet
 
   return (
     <div className="space-y-4 max-w-lg">
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
         <h3 className="font-semibold text-sm flex items-center gap-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Perfil da aplicação</h3>
 
         {/* Preview */}
@@ -282,24 +282,24 @@ function AppProfileTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDet
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nome *</label>
             <input type="text" maxLength={100} value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">URL do logotipo</label>
             <input type="url" maxLength={500} value={form.logoUrl} placeholder="https://..."
               onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descrição</label>
             <textarea maxLength={500} rows={3} value={form.description} placeholder="Descrição da aplicação..."
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full px-3 py-2 rounded-xl border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             <span className="text-xs text-muted-foreground">{form.description.length}/500</span>
           </div>
           <button type="submit" disabled={saving}
-            className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+            className="w-full h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
             {saving ? 'Salvando...' : 'Salvar perfil'}
           </button>
         </form>
@@ -363,7 +363,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
   return (
     <div className="space-y-4 max-w-lg">
       {/* Credentials */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
         <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Credenciais</h3>
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client ID</label>
@@ -416,7 +416,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
             </div>
           </div>
           <button type="submit" disabled={saving}
-            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60">
+            className="px-4 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
             {saving ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </form>
@@ -532,17 +532,17 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
               <label className="text-sm font-medium">{f.label}</label>
               <input type={f.type} maxLength={f.max} placeholder={f.placeholder} value={form[f.key]}
                 onChange={e => setForm(p => ({ ...p, [f.key]: f.key === 'username' ? e.target.value.toLowerCase() : e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
               {formErrors[f.key] && <p className="text-xs text-destructive">{formErrors[f.key]}</p>}
             </div>
           ))}
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar usuário'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
-              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
           </div>
         </form>
       </Modal>
@@ -570,94 +570,146 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
             <label className="text-sm font-medium">Nome completo</label>
             <input type="text" maxLength={100} value={editForm.name}
               onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {editErrors.name && <p className="text-xs text-destructive">{editErrors.name}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Usuário</label>
             <input type="text" maxLength={30} value={editForm.username}
               onChange={e => setEditForm(p => ({ ...p, username: e.target.value.toLowerCase() }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
             {editErrors.username && <p className="text-xs text-destructive">{editErrors.username}</p>}
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={editLoading}
-              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
               {editLoading ? 'Salvando...' : 'Salvar'}
             </button>
             <button type="button" onClick={() => setEditUser(null)}
-              className="px-4 h-9 text-sm border border-border rounded-lg hover:bg-muted transition-colors">Cancelar</button>
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
           </div>
         </form>
       </Modal>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
         {users.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">
             <Users className="w-6 h-6 mx-auto mb-2 opacity-40" />
             Nenhum usuário
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5">Usuário</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5 hidden sm:table-cell">Criado por</th>
-                <th className="text-right text-xs font-semibold text-muted-foreground px-5 py-2.5">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5">Usuário</th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-2.5">Criado por</th>
+                    <th className="text-right text-xs font-semibold text-muted-foreground px-5 py-2.5">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} className="border-b border-border last:border-0">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs font-bold shrink-0">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{u.name}</p>
+                            <p className="text-xs text-muted-foreground">@{u.username}</p>
+                          </div>
+                          {u.mustChangePassword && (
+                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Trocar senha</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        {u.createdByOwner ? (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Pencil className="w-3 h-3" /> {u.createdByOwner.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {canEdit && (
+                            <button onClick={() => openEdit(u)}
+                              className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-1">
+                              <Pencil className="w-3 h-3" /> Editar
+                            </button>
+                          )}
+                          {(canEdit || canDelete) && (
+                            <button onClick={() => handleResetPassword(u.id, u.name)}
+                              className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                              Reset senha
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => handleDelete(u.id)}
+                              className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
+                              Excluir
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y divide-border">
               {users.map(u => (
-                <tr key={u.id} className="border-b border-border last:border-0">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs font-bold">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{u.name}</p>
-                        <p className="text-xs text-muted-foreground">@{u.username}</p>
-                      </div>
-                      {u.mustChangePassword && (
-                        <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Trocar senha</span>
-                      )}
+                <div key={u.id} className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-sm font-bold shrink-0">
+                      {u.name.charAt(0).toUpperCase()}
                     </div>
-                  </td>
-                  <td className="px-5 py-3 hidden sm:table-cell">
-                    {u.createdByOwner ? (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Pencil className="w-3 h-3" /> {u.createdByOwner.name}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">@{u.username}</p>
+                    </div>
+                    {u.mustChangePassword && (
+                      <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">Trocar senha</span>
                     )}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  </div>
+                  {u.createdByOwner && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Pencil className="w-3 h-3" /> Criado por {u.createdByOwner.name}
+                    </p>
+                  )}
+                  {(canEdit || canDelete) && (
+                    <div className="flex flex-wrap gap-2">
                       {canEdit && (
                         <button onClick={() => openEdit(u)}
-                          className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-1">
+                          className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-1">
                           <Pencil className="w-3 h-3" /> Editar
                         </button>
                       )}
                       {(canEdit || canDelete) && (
                         <button onClick={() => handleResetPassword(u.id, u.name)}
-                          className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                          className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
                           Reset senha
                         </button>
                       )}
                       {canDelete && (
                         <button onClick={() => handleDelete(u.id)}
-                          className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
+                          className="text-xs px-3 py-1.5 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
                           Excluir
                         </button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -729,7 +781,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
 
   return (
     <div className="space-y-4 max-w-lg">
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">Convidar colaborador</h3>
@@ -802,7 +854,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
       )}
 
       {invites.length > 0 && (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
           <div className="px-5 py-3 border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">Convites pendentes</div>
           {invites.map(inv => (
             <div key={inv.id} className="flex items-center justify-between px-5 py-3 border-b border-border last:border-0">
@@ -920,22 +972,26 @@ function AppActivityTab({ appId }: { appId: string }) {
     fetch(`/api/apps/${appId}/audit`).then(r => r.json()).then(d => { if (Array.isArray(d)) setLogs(d) }).finally(() => setLoading(false))
   }, [appId])
 
-  if (loading) return <p className="text-sm text-muted-foreground">Carregando atividade...</p>
+  if (loading) return (
+    <div className="bg-card border border-border rounded-2xl px-5 py-10 text-center text-sm text-muted-foreground shadow-sm shadow-[#1a2550]/5">
+      Carregando atividade...
+    </div>
+  )
 
   if (logs.length === 0) return (
-    <div className="text-center py-12 text-muted-foreground text-sm">
+    <div className="bg-card border border-border rounded-2xl text-center py-12 text-muted-foreground text-sm shadow-sm shadow-[#1a2550]/5">
       <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
       Nenhuma atividade registrada ainda.
     </div>
   )
 
   return (
-    <div className="space-y-1">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
       {logs.map(log => {
         const label = ACTION_LABELS[log.action] ?? log.action
         const when = new Date(log.createdAt)
         return (
-          <div key={log.id} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+          <div key={log.id} className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-0">
             <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
               <Clock className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
@@ -966,7 +1022,7 @@ function AppAnalyticsTab({ appId }: { appId: string }) {
   if (!data) return <p className="text-sm text-muted-foreground">Carregando dados...</p>
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <StatCard label="Logins bem-sucedidos" value={data.loginSuccess} icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/40" />
       <StatCard label="Logins com falha" value={data.loginFailed} icon={XCircle} iconColor="text-rose-600" iconBg="bg-rose-100 dark:bg-rose-900/40" />
       <StatCard label="Tokens emitidos" value={data.tokenIssued} icon={Zap} iconColor="text-amber-600" iconBg="bg-amber-100 dark:bg-amber-900/40" />

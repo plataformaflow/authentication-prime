@@ -115,7 +115,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link href="/dashboard/apps"
-              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
               <AppWindow className="w-3.5 h-3.5" /> Ver aplicações
             </Link>
             {isOwner && (
@@ -146,7 +146,7 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
             <>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Últimos 30 dias</p>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <StatCard label="Logins bem-sucedidos" value={analytics.totalSuccess}
                     icon={CheckCircle2} iconColor="text-emerald-600" iconBg="bg-emerald-100 dark:bg-emerald-900/40" />
                   <StatCard label="Logins falhos" value={analytics.totalFailed}
@@ -203,10 +203,10 @@ export default function CompanyDetailPage({ params }: { params: Promise<{ id: st
               <form onSubmit={handleInvite} noValidate className="flex gap-2">
                 <input type="email" placeholder="E-mail do usuário" maxLength={255} value={inviteEmail}
                   onChange={e => { setInviteEmail(e.target.value); setInviteEmailError('') }}
-                  className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex-1 h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all"
                 />
                 <button type="submit" disabled={inviting}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-60">
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
                   <Send className="w-3.5 h-3.5" /> {inviting ? '...' : 'Convidar'}
                 </button>
               </form>
@@ -335,7 +335,7 @@ function CompanySettingsTab({
             <input
               type="text" maxLength={100} value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all"
             />
           </div>
 
@@ -344,7 +344,7 @@ function CompanySettingsTab({
             <input
               type="url" maxLength={500} value={form.logoUrl} placeholder="https://empresa.com/logo.png"
               onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all"
             />
             <p className="text-xs text-muted-foreground">A imagem será exibida na tela de login OAuth desta empresa.</p>
           </div>
@@ -354,12 +354,12 @@ function CompanySettingsTab({
             <textarea
               maxLength={300} rows={2} value={form.description} placeholder="Descrição opcional..."
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-2 rounded-xl border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all"
             />
           </div>
 
           <button type="submit" disabled={loading}
-            className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60">
+            className="w-full h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
             {loading ? 'Salvando...' : 'Salvar alterações'}
           </button>
         </form>
