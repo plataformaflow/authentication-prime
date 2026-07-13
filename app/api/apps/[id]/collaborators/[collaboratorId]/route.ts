@@ -67,9 +67,10 @@ export async function DELETE(
   ])
 
   if (collab) {
+    const collabOwner = await prisma.owner.findUnique({ where: { id: collab.ownerId }, select: { name: true, email: true } })
     await prisma.appCollaborator.delete({ where: { id: collaboratorId } })
     await prisma.appAuditLog.create({
-      data: { appId: id, actorId: session.ownerId, action: 'collaborator.remove', targetId: collab.ownerId },
+      data: { appId: id, actorId: session.ownerId, action: 'collaborator.remove', targetId: collab.ownerId, targetName: collabOwner?.name, meta: JSON.stringify({ email: collabOwner?.email }) },
     })
   } else if (invite) {
     await prisma.appCollaboratorInvite.delete({ where: { id: collaboratorId } })

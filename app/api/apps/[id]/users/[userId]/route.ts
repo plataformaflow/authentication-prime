@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     select: { id: true, name: true, username: true, mustChangePassword: true, createdAt: true, createdByOwner: { select: { id: true, name: true } } },
   })
   await prisma.appAuditLog.create({
-    data: { appId: id, actorId: session.ownerId, action: 'user.update', targetId: userId, targetName: updated.name },
+    data: { appId: id, actorId: session.ownerId, action: 'user.update', targetId: userId, targetName: updated.name, meta: JSON.stringify({ fields: Object.keys(updateData), username: updated.username }) },
   })
   return NextResponse.json(updated)
 }
@@ -55,7 +55,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   await prisma.authEvent.deleteMany({ where: { appUserId: userId } }).catch(() => null)
   await prisma.appUser.delete({ where: { id: userId } })
   await prisma.appAuditLog.create({
-    data: { appId: id, actorId: session.ownerId, action: 'user.delete', targetId: userId, targetName: user.name },
+    data: { appId: id, actorId: session.ownerId, action: 'user.delete', targetId: userId, targetName: user.name, meta: JSON.stringify({ permanent: true }) },
   })
   return NextResponse.json({ ok: true })
 }

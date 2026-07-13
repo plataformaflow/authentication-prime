@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   Settings, Users, BarChart3, Copy, Check, RefreshCw, Trash2, CheckCircle2, XCircle,
   Users2, Zap, Plus, KeyRound, AlertTriangle, UserPlus, X, Mail, Shield,
-  ArrowRightLeft, ImageIcon, Activity, Clock, Pencil,
+  ArrowRightLeft, ImageIcon, Activity, Clock, Pencil, ChevronDown, Download,
 } from 'lucide-react'
 import { validateName, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
@@ -116,7 +116,7 @@ export default function AppDetailPage({ params }: { params: Promise<{ id: string
         <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull || perms.canDeleteUsers} maxUsers={isFull ? null : perms.maxUsers} />
       )}
       {tab === 'collaborators' && isFull && <AppCollaboratorsTab appId={id} />}
-      {tab === 'activity' && isFull && <AppActivityTab appId={id} />}
+      {tab === 'activity' && isFull && <AppActivityTab appId={id} appName={app.name} />}
       {tab === 'api' && isFull && (
         <AppTransferSection appId={id} currentCompanyId={app.company.id} currentCompanyName={app.company.name}
           onTransferred={(newCompany) => setApp(p => p ? { ...p, company: newCompany } : p)} />
@@ -954,60 +954,343 @@ function CollabPermEditor({ collab, onSave, onCancel }: {
 // ─── Activity Tab ────────────────────────────────────────────────────────────
 
 const ACTION_LABELS: Record<string, string> = {
-  'user.create': 'Criou usuário',
-  'user.delete': 'Excluiu usuário',
-  'user.update': 'Editou usuário',
-  'user.reset_password': 'Resetou senha de',
-  'app.rename': 'Renomeou app para',
-  'app.update': 'Atualizou configurações',
-  'collaborator.add': 'Adicionou colaborador',
-  'collaborator.remove': 'Removeu colaborador',
+  'user.create':           'Criou usuário',
+  'user.delete':           'Excluiu usuário',
+  'user.update':           'Editou usuário',
+  'user.reset_password':   'Resetou senha de',
+  'app.rename':            'Renomeou app',
+  'app.update':            'Atualizou configurações',
+  'collaborator.add':      'Adicionou colaborador',
+  'collaborator.remove':   'Removeu colaborador',
 }
 
-function AppActivityTab({ appId }: { appId: string }) {
-  const [logs, setLogs] = useState<Array<{ id: string; action: string; targetName?: string; actor: { name: string; email: string }; createdAt: string }>>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch(`/api/apps/${appId}/audit`).then(r => r.json()).then(d => { if (Array.isArray(d)) setLogs(d) }).finally(() => setLoading(false))
-  }, [appId])
+type AuditLog = {
+  id: string
+  action: string
+  targetId?: string | null
+  targetName?: string | null
+  meta?: string | null
+  actor: { id: string; name: string; email: string }
+  createdAt: string
+}
 
-  if (loading) return (
-    <div className="bg-card border border-border rounded-2xl px-5 py-10 text-center text-sm text-muted-foreground shadow-sm shadow-[#1a2550]/5">
-      Carregando atividade...
-    </div>
-  )
+type AuditActor = { id: string; name: string }
 
-  if (logs.length === 0) return (
-    <div className="bg-card border border-border rounded-2xl text-center py-12 text-muted-foreground text-sm shadow-sm shadow-[#1a2550]/5">
-      <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-      Nenhuma atividade registrada ainda.
-    </div>
-  )
+function buildDetails(log: AuditLog): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = []
+  rows.push({ label: 'Ação', value: ACTION_LABELS[log.action] ?? log.action })
+  rows.push({ label: 'Ator', value: `${log.actor.name} (${log.actor.email})` })
+  if (log.targetName) rows.push({ label: 'Alvo', value: log.targetName })
+  if (log.targetId)   rows.push({ label: 'ID do alvo', value: log.targetId })
+  try {
+    if (log.meta) {
+      const m = JSON.parse(log.meta) as Record<string, unknown>
+      if (m.username)  rows.push({ label: 'Username', value: String(m.username) })
+      if (m.email)     rows.push({ label: 'E-mail', value: String(m.email) })
+      if (m.fields && Array.isArray(m.fields)) {
+        const fieldLabels: Record<string, string> = { name: 'nome', username: 'username', mustChangePassword: 'trocar senha' }
+        rows.push({ label: 'Campos alterados', value: (m.fields as string[]).map(f => fieldLabels[f] ?? f).join(', ') })
+      }
+      if (m.permanent) rows.push({ label: 'Exclusão', value: 'Permanente — todos os tokens e sessões foram revogados' })
+    }
+  } catch { /* meta not JSON */ }
+  return rows
+}
+
+function ActivityRow({ log, forceOpen }: { log: AuditLog; forceOpen?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const isOpen = forceOpen ?? open
+  const label  = ACTION_LABELS[log.action] ?? log.action
+  const when   = new Date(log.createdAt)
+  const details = buildDetails(log)
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
-      {logs.map(log => {
-        const label = ACTION_LABELS[log.action] ?? log.action
-        const when = new Date(log.createdAt)
-        return (
-          <div key={log.id} className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-0">
-            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+    <div className="border-b border-border last:border-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground mb-1">
+            {label}
+          </span>
+          <p className="text-sm font-medium">
+            {log.actor.name}
+            {log.targetName && <span className="text-muted-foreground font-normal"> → <span className="font-medium text-foreground">{log.targetName}</span></span>}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {when.toLocaleDateString('pt-BR')} às {when.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 mt-2 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-3 ml-0 border-t border-border/60 bg-muted/20">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 pt-3">
+            {details.map(({ label: l, value }) => (
+              <div key={l}>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{l}</dt>
+                <dd className="text-sm text-foreground break-all">{value}</dd>
+              </div>
+            ))}
+            <div>
+              <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Data e hora</dt>
+              <dd className="text-sm text-foreground">
+                {when.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} às{' '}
+                {when.toLocaleTimeString('pt-BR')}
+              </dd>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm">
-                <span className="font-medium">{log.actor.name}</span>
-                {' '}<span className="text-muted-foreground">{label}</span>
-                {log.targetName && <span className="font-medium"> {log.targetName}</span>}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {when.toLocaleDateString('pt-BR')} às {when.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </p>
+          </dl>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AppActivityTab({ appId, appName }: { appId: string; appName: string }) {
+  const [logs,    setLogs]    = useState<AuditLog[]>([])
+  const [actors,  setActors]  = useState<AuditActor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf')
+  const [exportDetailed, setExportDetailed] = useState(false)
+
+  const [filters, setFilters] = useState({ from: '', to: '', actorId: '', action: '' })
+
+  function buildQuery(extra?: Record<string, string>) {
+    const p = new URLSearchParams()
+    const f = { ...filters, ...extra }
+    if (f.from)    p.set('from',    f.from)
+    if (f.to)      p.set('to',      f.to)
+    if (f.actorId) p.set('actorId', f.actorId)
+    if (f.action)  p.set('action',  f.action)
+    return p.toString() ? `?${p}` : ''
+  }
+
+  function load() {
+    setLoading(true)
+    fetch(`/api/apps/${appId}/audit${buildQuery()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.logs)   setLogs(d.logs)
+        if (d.actors) setActors(d.actors)
+      })
+      .finally(() => setLoading(false))
+  }
+
+  // initial load (no filters)
+  useEffect(() => {
+    fetch(`/api/apps/${appId}/audit`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.logs)   setLogs(d.logs)
+        if (d.actors) setActors(d.actors)
+      })
+      .finally(() => setLoading(false))
+  }, [appId])
+
+  async function handleExportCsv() {
+    setExporting(true)
+    try {
+      if (exportDetailed) {
+        // Build detailed CSV client-side from already-loaded logs
+        const res  = await fetch(`/api/apps/${appId}/audit${buildQuery()}`)
+        const data = await res.json() as { logs: AuditLog[] }
+        const logsData = data.logs ?? []
+        const rows = [
+          ['Data', 'Hora', 'Ação', 'Ator', 'E-mail do ator', 'Alvo', 'ID do alvo', 'Username', 'Campos alterados', 'Detalhes adicionais'],
+          ...logsData.map(l => {
+            const d = new Date(l.createdAt)
+            let username = '', fields = '', extra = ''
+            try {
+              if (l.meta) {
+                const m = JSON.parse(l.meta) as Record<string, unknown>
+                if (m.username) username = String(m.username)
+                if (m.fields && Array.isArray(m.fields)) fields = (m.fields as string[]).join(', ')
+                if (m.email)   extra = `e-mail: ${m.email}`
+                if (m.permanent) extra = 'exclusão permanente'
+              }
+            } catch { /* noop */ }
+            return [
+              d.toLocaleDateString('pt-BR'),
+              d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+              ACTION_LABELS[l.action] ?? l.action,
+              l.actor.name, l.actor.email,
+              l.targetName ?? '', l.targetId ?? '',
+              username, fields, extra,
+            ]
+          }),
+        ]
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href = url; a.download = `atividade-${appName}-detalhado.csv`; a.click()
+        URL.revokeObjectURL(url)
+      } else {
+        const res  = await fetch(`/api/apps/${appId}/audit${buildQuery({ export: 'csv' })}`)
+        const blob = await res.blob()
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href = url; a.download = `atividade-${appName}.csv`; a.click()
+        URL.revokeObjectURL(url)
+      }
+    } finally { setExporting(false) }
+  }
+
+  async function handleExportPdf() {
+    setExporting(true)
+    try {
+      const res  = await fetch(`/api/apps/${appId}/audit${buildQuery()}`)
+      const data = await res.json() as { logs: AuditLog[] }
+      const logsData = data.logs ?? []
+
+      const rows = logsData.map(l => {
+        const d = new Date(l.createdAt)
+        const details = buildDetails(l)
+        return { when: `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, label: ACTION_LABELS[l.action] ?? l.action, actor: l.actor.name, target: l.targetName ?? '—', details }
+      })
+
+      const detailCol = exportDetailed
+        ? '<th>Detalhes</th>'
+        : ''
+      const detailCell = (r: typeof rows[0]) => exportDetailed
+        ? `<td><div class="detail-grid">${r.details.filter(d => !['Ação','Ator','Alvo'].includes(d.label)).map(d => `<div><div class="detail-label">${d.label}</div><div class="detail-value">${d.value}</div></div>`).join('')}</div></td>`
+        : ''
+
+      const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<title>Histórico de Atividade — ${appName}</title>
+<style>
+  body{font-family:system-ui,sans-serif;font-size:11px;color:#111;margin:24px}
+  h1{font-size:15px;font-weight:700;color:#1a2f6b;margin:0 0 4px}
+  .sub{color:#6b7280;font-size:10px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#f1f4fb;color:#1a2550;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;text-align:left;border-bottom:2px solid #dce5f5}
+  td{padding:6px 8px;border-bottom:1px solid #eef1f9;vertical-align:top}
+  .badge{display:inline-block;font-size:9px;font-weight:600;background:#e8eef8;color:#1a2550;padding:2px 6px;border-radius:9999px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;padding:4px 0 2px;border-top:1px solid #eef1f9}
+  .detail-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#6b7280}
+  .detail-value{font-size:9px;color:#111;word-break:break-all}
+  tr:last-child td{border-bottom:none}
+  @media print{body{margin:12px}@page{margin:16mm}}
+</style></head><body>
+<h1>Histórico de Atividade — ${appName}</h1>
+<p class="sub">Exportado em ${new Date().toLocaleString('pt-BR')} — ${rows.length} registro${rows.length !== 1 ? 's' : ''}${exportDetailed ? ' · detalhado' : ''}</p>
+<table>
+  <thead><tr><th>Data/hora</th><th>Ação</th><th>Ator</th><th>Alvo</th>${detailCol}</tr></thead>
+  <tbody>
+    ${rows.map(r => `<tr>
+      <td style="white-space:nowrap">${r.when}</td>
+      <td><span class="badge">${r.label}</span></td>
+      <td>${r.actor}</td>
+      <td>${r.target}</td>
+      ${detailCell(r)}
+    </tr>`).join('')}
+  </tbody>
+</table>
+</body></html>`
+
+      const win = window.open('', '_blank')
+      if (!win) return
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      setTimeout(() => { win.print() }, 400)
+    } finally { setExporting(false) }
+  }
+
+  function handleExport() {
+    if (exportFormat === 'pdf') handleExportPdf()
+    else handleExportCsv()
+  }
+
+  const ALL_ACTIONS = Object.keys(ACTION_LABELS)
+
+  return (
+    <div className="space-y-3">
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-2xl p-4 shadow-sm shadow-[#1a2550]/5">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="space-y-1 min-w-[130px]">
+            <label className="text-xs font-medium text-muted-foreground">De</label>
+            <input type="date" value={filters.from} onChange={e => setFilters(p => ({ ...p, from: e.target.value }))}
+              className="h-9 w-full px-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60" />
+          </div>
+          <div className="space-y-1 min-w-[130px]">
+            <label className="text-xs font-medium text-muted-foreground">Até</label>
+            <input type="date" value={filters.to} onChange={e => setFilters(p => ({ ...p, to: e.target.value }))}
+              className="h-9 w-full px-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60" />
+          </div>
+          <div className="space-y-1 min-w-[150px] flex-1">
+            <label className="text-xs font-medium text-muted-foreground">Ator</label>
+            <select value={filters.actorId} onChange={e => setFilters(p => ({ ...p, actorId: e.target.value }))}
+              className="h-9 w-full px-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60">
+              <option value="">Todos</option>
+              {actors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1 min-w-[170px] flex-1">
+            <label className="text-xs font-medium text-muted-foreground">Ação</label>
+            <select value={filters.action} onChange={e => setFilters(p => ({ ...p, action: e.target.value }))}
+              className="h-9 w-full px-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60">
+              <option value="">Todas</option>
+              {ALL_ACTIONS.map(a => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={load}
+              className="h-9 px-4 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-medium rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
+              Filtrar
+            </button>
+            <button onClick={() => { setFilters({ from: '', to: '', actorId: '', action: '' }); setTimeout(load, 0) }}
+              className="h-9 px-3 text-sm border border-border rounded-xl hover:bg-muted transition-colors">
+              Limpar
+            </button>
+            <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none h-9 px-1">
+              <input
+                type="checkbox"
+                checked={exportDetailed}
+                onChange={e => setExportDetailed(e.target.checked)}
+                className="rounded accent-indigo-600"
+              />
+              <span className="text-muted-foreground whitespace-nowrap">Detalhado</span>
+            </label>
+            <div className="flex rounded-xl overflow-hidden border border-border">
+              <button onClick={handleExport} disabled={exporting}
+                className="h-9 px-3 text-sm hover:bg-muted transition-colors flex items-center gap-1.5 disabled:opacity-60 border-r border-border">
+                <Download className="w-3.5 h-3.5" />
+                {exporting ? 'Exportando...' : `Exportar ${exportFormat.toUpperCase()}`}
+              </button>
+              <select
+                value={exportFormat}
+                onChange={e => setExportFormat(e.target.value as 'pdf' | 'csv')}
+                className="h-9 px-2 text-xs bg-transparent border-0 focus:outline-none cursor-pointer"
+              >
+                <option value="pdf">PDF</option>
+                <option value="csv">CSV</option>
+              </select>
             </div>
           </div>
-        )
-      })}
+        </div>
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="bg-card border border-border rounded-2xl px-5 py-10 text-center text-sm text-muted-foreground shadow-sm shadow-[#1a2550]/5">
+          Carregando atividade...
+        </div>
+      ) : logs.length === 0 ? (
+        <div className="bg-card border border-border rounded-2xl text-center py-12 text-muted-foreground text-sm shadow-sm shadow-[#1a2550]/5">
+          <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          Nenhuma atividade encontrada.
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
+          {logs.map(log => <ActivityRow key={log.id} log={log} forceOpen={exportDetailed || undefined} />)}
+        </div>
+      )}
     </div>
   )
 }

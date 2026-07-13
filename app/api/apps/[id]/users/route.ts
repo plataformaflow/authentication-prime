@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   })
 
   await prisma.appAuditLog.create({
-    data: { appId: id, actorId: session.ownerId, action: 'user.create', targetId: user.id, targetName: user.name },
+    data: { appId: id, actorId: session.ownerId, action: 'user.create', targetId: user.id, targetName: user.name, meta: JSON.stringify({ username }) },
   })
 
   return NextResponse.json(user, { status: 201 })
