@@ -228,3 +228,10 @@ model AppTransferRequest {
 
   @@unique([appId])
 }
+
+model BlockedTenant {
+  id        String   @id @default(cuid()) @map("_id")
+  slug      String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}

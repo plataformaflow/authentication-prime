@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Users, Building2, AppWindow, Activity } from 'lucide-react'
+import { Users, Building2, AppWindow, Activity, ShieldBan } from 'lucide-react'
 
 export default async function AdminPage() {
   const since30 = new Date(); since30.setDate(since30.getDate() - 30)
-  const [totalOwners, totalCompanies, totalApps, totalUsers, totalEvents] = await Promise.all([
+  const [totalOwners, totalCompanies, totalApps, totalUsers, totalEvents, totalBlockedTenants] = await Promise.all([
     prisma.owner.count(), prisma.company.count(), prisma.oAuthApp.count(), prisma.appUser.count(),
     prisma.authEvent.count({ where: { createdAt: { gte: since30 } } }),
+    prisma.blockedTenant.count(),
   ])
   const recentOwners = await prisma.owner.findMany({
     orderBy: { createdAt: 'desc' }, take: 5,
@@ -25,6 +26,7 @@ export default async function AdminPage() {
           { label: 'Empresas', value: totalCompanies, href: '/admin/companies', icon: Building2 },
           { label: 'Apps', value: totalApps, href: '/admin/apps', icon: AppWindow },
           { label: 'Eventos (30d)', value: totalEvents, href: '/admin', icon: Activity },
+          { label: 'Tenants bloqueados', value: totalBlockedTenants, href: '/admin/blocked-tenants', icon: ShieldBan },
         ].map(({ label, value, href, icon: Icon }) => (
           <Link key={label} href={href} className="bg-card border border-border rounded-xl p-6 hover:border-ring/50 transition-colors">
             <div className="flex items-center justify-between mb-2">

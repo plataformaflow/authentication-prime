@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { setSession } from '@/lib/session'
+import { ADMIN_EMAIL } from '@/lib/auth'
 
 const schema = z.object({
   name: z.string().min(2).max(100),
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (existing) return NextResponse.json({ error: 'E-mail já cadastrado.' }, { status: 409 })
 
   const hashed = await hashPassword(password)
-  const owner = await prisma.owner.create({ data: { name, email, password: hashed } })
+  const owner = await prisma.owner.create({ data: { name, email, password: hashed, isAdmin: email === ADMIN_EMAIL } })
 
   // Resolve pending app collaborator invites for this email
   const pendingCollabInvites = await prisma.appCollaboratorInvite.findMany({

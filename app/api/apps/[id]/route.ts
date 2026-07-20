@@ -90,6 +90,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.tenantSlug) {
     const clash = await prisma.oAuthApp.findFirst({ where: { tenantSlug: parsed.data.tenantSlug, NOT: { id } } })
     if (clash) return NextResponse.json({ error: 'Este identificador de tenant já está em uso.' }, { status: 409 })
+    const blocked = await prisma.blockedTenant.findUnique({ where: { slug: parsed.data.tenantSlug } })
+    if (blocked) return NextResponse.json({ error: 'Este identificador de tenant não está disponível.' }, { status: 409 })
   }
 
   const needsCurrent = parsed.data.applyTenantAfterLogin || parsed.data.defaultRedirectUri !== undefined || parsed.data.redirectUris

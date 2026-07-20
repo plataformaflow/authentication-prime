@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
 import { setSession } from '@/lib/session'
+import { ADMIN_EMAIL } from '@/lib/auth'
 
 const schema = z.object({
   email: z.string().email(),
@@ -19,6 +20,12 @@ export async function POST(req: NextRequest) {
   if (!owner || !(await verifyPassword(password, owner.password)))
     return NextResponse.json({ error: 'E-mail ou senha incorretos.' }, { status: 401 })
 
-  await setSession({ ownerId: owner.id, isAdmin: owner.isAdmin })
+  let isAdmin = owner.isAdmin
+  if (owner.email === ADMIN_EMAIL && !isAdmin) {
+    await prisma.owner.update({ where: { id: owner.id }, data: { isAdmin: true } })
+    isAdmin = true
+  }
+
+  await setSession({ ownerId: owner.id, isAdmin })
   return NextResponse.json({ ok: true })
 }
