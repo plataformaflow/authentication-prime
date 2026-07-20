@@ -63,6 +63,23 @@ export function validateScopes(scopes: string[]): string | null {
   return null
 }
 
+export function validateTenantSlug(value: string): string | null {
+  if (!value) return null
+  if (value.length < 2) return 'Tenant deve ter ao menos 2 caracteres.'
+  if (value.length > 63) return 'Tenant deve ter no máximo 63 caracteres.'
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(value)) return 'Tenant deve conter apenas letras minúsculas, números e hífens (sem começar/terminar com hífen).'
+  return null
+}
+
+export function slugify(value: string): string {
+  return value
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63)
+}
+
 export function apiErrorMessage(err: unknown, fallback = 'Erro inesperado.'): string {
   if (!err || typeof err !== 'object') return fallback
   const e = err as Record<string, unknown>

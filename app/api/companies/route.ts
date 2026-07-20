@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
       ...(cpf ? { cpf: formatCPF(cpf) } : {}),
       ownerId: session.ownerId,
     },
+    include: { _count: { select: { apps: true } } },
   })
   return NextResponse.json(company, { status: 201 })
 }

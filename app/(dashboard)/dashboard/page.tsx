@@ -25,7 +25,7 @@ export default async function DashboardPage() {
         {[
           { label: 'Empresas', value: companiesCount, href: '/dashboard/companies', icon: Building2 },
           { label: 'Aplicativos', value: appsCount, href: '/dashboard/apps', icon: AppWindow },
-          { label: 'Convites', value: invitesCount, href: '/dashboard/invites', icon: Mail },
+          { label: 'Convites', value: invitesCount, href: '/dashboard/companies', icon: Mail },
         ].map(({ label, value, href, icon: Icon }) => (
           <Link key={href} href={href} className="bg-card border border-border rounded-xl p-6 hover:border-ring/50 transition-colors">
             <div className="flex items-center justify-between mb-2">

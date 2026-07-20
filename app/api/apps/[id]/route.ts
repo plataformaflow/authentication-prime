@@ -81,8 +81,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     description: z.string().max(500).optional(),
     redirectUris: z.array(z.string().url()).min(1).optional(),
     scopes: z.array(z.string()).optional(),
+    tenantSlug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).min(2).max(63).optional().or(z.literal('')),
+    applyTenantAfterLogin: z.boolean().optional(),
+    defaultRedirectUri: z.string().url().optional().or(z.literal('')),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
+
+  if (parsed.data.tenantSlug) {
+    const clash = await prisma.oAuthApp.findFirst({ where: { tenantSlug: parsed.data.tenantSlug, NOT: { id } } })
+    if (clash) return NextResponse.json({ error: 'Este identificador de tenant já está em uso.' }, { status: 409 })
+  }
+
+  const needsCurrent = parsed.data.applyTenantAfterLogin || parsed.data.defaultRedirectUri !== undefined || parsed.data.redirectUris
+  const current = needsCurrent
+    ? await prisma.oAuthApp.findUnique({ where: { id }, select: { tenantSlug: true, redirectUris: true, defaultRedirectUri: true } })
+    : null
+
+  if (parsed.data.applyTenantAfterLogin) {
+    const effectiveSlug = parsed.data.tenantSlug !== undefined ? parsed.data.tenantSlug : current?.tenantSlug
+    if (!effectiveSlug) return NextResponse.json({ error: 'Defina um identificador de tenant antes de ativar essa opção.' }, { status: 400 })
+  }
+
+  const effectiveRedirectUris = parsed.data.redirectUris ?? current?.redirectUris ?? []
+  if (parsed.data.defaultRedirectUri && !effectiveRedirectUris.includes(parsed.data.defaultRedirectUri)) {
+    return NextResponse.json({ error: 'O URI padrão precisa ser uma das URIs de redirecionamento cadastradas.' }, { status: 400 })
+  }
 
   const data: Record<string, unknown> = {}
   if (parsed.data.name !== undefined) data.name = parsed.data.name
@@ -90,6 +113,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.description !== undefined) data.description = parsed.data.description || null
   if (parsed.data.redirectUris) data.redirectUris = parsed.data.redirectUris
   if (parsed.data.scopes) data.scopes = parsed.data.scopes
+  if (parsed.data.tenantSlug !== undefined) data.tenantSlug = parsed.data.tenantSlug || null
+  if (parsed.data.applyTenantAfterLogin !== undefined) data.applyTenantAfterLogin = parsed.data.applyTenantAfterLogin
+  if (parsed.data.defaultRedirectUri !== undefined) {
+    data.defaultRedirectUri = parsed.data.defaultRedirectUri || null
+  } else if (parsed.data.redirectUris && current?.defaultRedirectUri && !parsed.data.redirectUris.includes(current.defaultRedirectUri)) {
+    // Redirect URIs changed and the previously configured default is no longer among them
+    data.defaultRedirectUri = null
+  }
 
   await prisma.oAuthApp.update({ where: { id }, data })
   await prisma.appAuditLog.create({

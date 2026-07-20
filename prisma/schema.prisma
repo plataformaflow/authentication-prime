@@ -32,6 +32,7 @@ model Company {
   cpf              String?
   logoUrl          String?
   description      String?
+  apiKeyHash       String?
   ownerId          String
   owner            Owner               @relation(fields: [ownerId], references: [id])
   apps             OAuthApp[]
@@ -65,26 +66,29 @@ model CompanyInvite {
 }
 
 model OAuthApp {
-  id               String                 @id @default(cuid()) @map("_id")
-  name             String
-  logoUrl          String?
-  description      String?
-  clientId         String                 @unique
-  clientSecret     String
-  redirectUris     String[]
-  scopes           String[]
-  companyId        String
-  company          Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  users            AppUser[]
-  codes            AuthorizationCode[]
-  tokens           AccessToken[]
-  refreshTokens    RefreshToken[]
-  authEvents       AuthEvent[]
-  collaborators    AppCollaborator[]
-  collabInvites    AppCollaboratorInvite[]
-  transferRequests AppTransferRequest[]
-  auditLogs        AppAuditLog[]
-  createdAt        DateTime               @default(now())
+  id                    String                  @id @default(cuid()) @map("_id")
+  name                  String
+  logoUrl               String?
+  description           String?
+  clientId              String                  @unique
+  clientSecret          String
+  redirectUris          String[]
+  scopes                String[]
+  tenantSlug            String?
+  applyTenantAfterLogin Boolean                 @default(false)
+  defaultRedirectUri    String?
+  companyId             String
+  company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users                 AppUser[]
+  codes                 AuthorizationCode[]
+  tokens                AccessToken[]
+  refreshTokens         RefreshToken[]
+  authEvents            AuthEvent[]
+  collaborators         AppCollaborator[]
+  collabInvites         AppCollaboratorInvite[]
+  transferRequests      AppTransferRequest[]
+  auditLogs             AppAuditLog[]
+  createdAt             DateTime                @default(now())
 }
 
 model AppCollaborator {

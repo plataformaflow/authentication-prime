@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
   prisma.authEvent.create({ data: { appId: app.id, appUserId: user.id, event: 'login_success', ip } }).catch(() => {})
   const code = await generateAuthCode({ appUserId: user.id, appId: app.id, redirectUri, scope, codeChallenge, codeChallengeMethod })
   const redirectUrl = new URL(redirectUri)
+  if (app.applyTenantAfterLogin && app.tenantSlug) redirectUrl.hostname = `${app.tenantSlug}.${redirectUrl.hostname}`
   redirectUrl.searchParams.set('code', code)
   if (state) redirectUrl.searchParams.set('state', state)
   if (user.mustChangePassword) redirectUrl.searchParams.set('must_change_password', '1')

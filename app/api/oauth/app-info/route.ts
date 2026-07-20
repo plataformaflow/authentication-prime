@@ -27,5 +27,6 @@ export async function GET(req: NextRequest) {
     companyLogoUrl: app.company.logoUrl ?? null,
     appLogoUrl: app.logoUrl ?? null,
     appId: app.id,
+    tenantSlug: app.tenantSlug ?? null,
   })
 }
