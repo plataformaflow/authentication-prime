@@ -28,6 +28,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       apps: { include: { _count: { select: { users: true, authEvents: true } } } },
       _count: { select: { apps: true } },
       members: { include: { owner: { select: { id: true, name: true, email: true } } } },
+      webhooks: { orderBy: { createdAt: 'desc' } },
     },
   })
   if (!company) redirect('/dashboard/companies')
@@ -60,7 +61,11 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     apps: Object.values(byApp).map(a => ({ appId: a.appId, appName: a.appName, success: a.success, failed: a.failed, activeUsers: a.activeUsers.size, totalUsers: userCountMap[a.appId] ?? 0 })),
   }
 
-  const companyWithRole = { ...company, role: company.ownerId === session.ownerId ? 'owner' : 'member' }
+  const companyWithRole = {
+    ...company,
+    role: company.ownerId === session.ownerId ? 'owner' : 'member',
+    webhooks: company.webhooks.map(w => ({ id: w.id, url: w.url, active: w.active, createdAt: w.createdAt })),
+  }
 
   return (
     <CompanyDetailClient

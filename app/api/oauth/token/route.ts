@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
     const user = await prisma.appUser.findUnique({ where: { id: record.appUserId } })
     if (!user) return NextResponse.json({ error: 'invalid_grant' }, { status: 400 })
-    const { token, expiresIn } = await issueAccessToken({ appUserId: user.id, appId: app.id, scope: record.scope, username: user.username, name: user.name })
+    const { token, expiresIn } = await issueAccessToken({ appUserId: user.id, appId: app.id, clientId: app.clientId, scope: record.scope, username: user.username, name: user.name })
     const refreshToken = await issueRefreshToken({ appUserId: user.id, appId: app.id, scope: record.scope })
     prisma.authEvent.create({ data: { appId: app.id, appUserId: user.id, event: 'token_issued', ip } }).catch(() => {})
     return NextResponse.json({ access_token: token, token_type: 'Bearer', expires_in: expiresIn, refresh_token: refreshToken, scope: record.scope })
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (!raw) return NextResponse.json({ error: 'invalid_request' }, { status: 400 })
     const record = await verifyRefreshToken(raw)
     if (!record || record.appId !== app.id) return NextResponse.json({ error: 'invalid_grant' }, { status: 400 })
-    const { token, expiresIn } = await issueAccessToken({ appUserId: record.appUser.id, appId: app.id, scope: record.scope, username: record.appUser.username, name: record.appUser.name })
+    const { token, expiresIn } = await issueAccessToken({ appUserId: record.appUser.id, appId: app.id, clientId: app.clientId, scope: record.scope, username: record.appUser.username, name: record.appUser.name })
     await revokeRefreshTokenRaw(raw)
     const newRefresh = await issueRefreshToken({ appUserId: record.appUser.id, appId: app.id, scope: record.scope })
     prisma.authEvent.create({ data: { appId: app.id, appUserId: record.appUser.id, event: 'token_refreshed', ip } }).catch(() => {})

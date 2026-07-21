@@ -4,16 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send, Settings, ImageIcon, KeyRound, AlertTriangle, Copy, Check, RefreshCw } from 'lucide-react'
+import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send, Settings, ImageIcon, KeyRound, AlertTriangle, Copy, Check, RefreshCw, Webhook as WebhookIcon, Plus, Power } from 'lucide-react'
 import { validateEmail, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { AuthLineChart, AppBarChart } from '@/components/dashboard/analytics-charts'
 
+interface WebhookItem {
+  id: string; url: string; active: boolean; createdAt: string
+}
+
 interface CompanyDetail {
   id: string; name: string; cnpj?: string; cpf?: string; logoUrl?: string; description?: string; role: string
   apps: Array<{ id: string; name: string; _count: { users: number; authEvents: number } }>
   members: Array<{ id: string; owner: { id: string; name: string; email: string } }>
+  webhooks: WebhookItem[]
 }
 
 interface Analytics {
@@ -357,6 +362,8 @@ function CompanySettingsTab({
 
       <CompanyApiKeySection companyId={company.id} />
 
+      <CompanyWebhooksSection companyId={company.id} webhooks={company.webhooks} onUpdate={webhooks => onUpdate({ ...company, webhooks })} />
+
       {/* Zona de perigo */}
       <div className="bg-card border border-destructive/30 rounded-xl p-5 space-y-3">
         <h3 className="text-sm font-semibold text-destructive">Zona de perigo</h3>
@@ -422,6 +429,133 @@ function CompanyApiKeySection({ companyId }: { companyId: string }) {
         className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-60">
         <RefreshCw className="w-3.5 h-3.5" /> {rotating ? 'Gerando...' : 'Gerar / rotacionar chave'}
       </button>
+    </div>
+  )
+}
+
+function CompanyWebhooksSection({ companyId, webhooks, onUpdate }: {
+  companyId: string
+  webhooks: WebhookItem[]
+  onUpdate: (webhooks: WebhookItem[]) => void
+}) {
+  const [url, setUrl] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [newSecret, setNewSecret] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  async function handleAdd(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!url.trim()) { toast.error('Informe a URL do webhook.'); return }
+    setCreating(true)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/webhooks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate([{ id: data.id, url: data.url, active: data.active, createdAt: data.createdAt }, ...webhooks])
+      setNewSecret(data.secret)
+      setUrl('')
+      toast.success('Webhook adicionado!')
+    } catch { toast.error('Erro ao adicionar webhook.') }
+    finally { setCreating(false) }
+  }
+
+  async function handleToggle(webhook: WebhookItem) {
+    setBusyId(webhook.id)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/webhooks/${webhook.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !webhook.active }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate(webhooks.map(w => (w.id === webhook.id ? { ...w, active: data.active } : w)))
+    } catch { toast.error('Erro ao atualizar webhook.') }
+    finally { setBusyId(null) }
+  }
+
+  async function handleDelete(webhookId: string) {
+    if (!confirm('Remover este webhook?')) return
+    setBusyId(webhookId)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/webhooks/${webhookId}`, { method: 'DELETE' })
+      if (!res.ok) { toast.error('Erro ao remover webhook.'); return }
+      onUpdate(webhooks.filter(w => w.id !== webhookId))
+      toast.success('Webhook removido.')
+    } catch { toast.error('Erro ao remover webhook.') }
+    finally { setBusyId(null) }
+  }
+
+  function copySecret() {
+    if (!newSecret) return
+    navigator.clipboard.writeText(newSecret)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <WebhookIcon className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Webhooks</h3>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Sempre que uma aplicação desta empresa for criada ou tiver o tenant/redirect URIs alterados, um POST assinado (HMAC SHA-256, header <code className="font-mono">X-PrimeAuth-Signature</code>) com as credenciais é enviado para cada URL ativa abaixo.
+      </p>
+
+      {newSecret && (
+        <div className="space-y-2">
+          <label className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" /> Salve o segredo agora — não será exibido novamente!
+          </label>
+          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+            <code className="text-xs font-mono text-amber-800 dark:text-amber-200 flex-1 truncate">{newSecret}</code>
+            <button onClick={copySecret} className="shrink-0 text-amber-700 dark:text-amber-300 hover:opacity-80 transition-opacity">
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <input type="url" placeholder="https://servidor.com/api/webhooks/prime-auth" value={url}
+          onChange={e => setUrl(e.target.value)}
+          className="flex-1 h-9 px-3 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button type="submit" disabled={creating}
+          className="flex items-center gap-1.5 px-3 h-9 text-xs bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-lg shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60 shrink-0">
+          <Plus className="w-3.5 h-3.5" /> {creating ? '...' : 'Adicionar'}
+        </button>
+      </form>
+
+      {webhooks.length > 0 && (
+        <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+          {webhooks.map(w => (
+            <div key={w.id} className="flex items-center justify-between gap-2 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-xs font-mono truncate">{w.url}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{w.active ? 'Ativo' : 'Desativado'}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleToggle(w)} disabled={busyId === w.id}
+                  title={w.active ? 'Desativar' : 'Ativar'}
+                  className={`p-1.5 rounded-lg transition-colors disabled:opacity-60 ${w.active ? 'text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' : 'text-muted-foreground hover:bg-muted'}`}>
+                  <Power className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleDelete(w.id)} disabled={busyId === w.id}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

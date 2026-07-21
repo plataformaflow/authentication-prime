@@ -39,6 +39,7 @@ model Company {
   members          CompanyMember[]
   invites          CompanyInvite[]
   transferRequests AppTransferRequest[]
+  webhooks         Webhook[]
   createdAt        DateTime            @default(now())
 }
 
@@ -227,6 +228,16 @@ model AppTransferRequest {
   createdAt       DateTime @default(now())
 
   @@unique([appId])
+}
+
+model Webhook {
+  id        String   @id @default(cuid()) @map("_id")
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  url       String
+  secret    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model BlockedTenant {

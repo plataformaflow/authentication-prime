@@ -5,11 +5,11 @@ import { prisma } from '../prisma'
 const secret = () => new TextEncoder().encode(process.env.JWT_SECRET ?? 'dev-jwt-secret-change-in-production')
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
-export async function issueAccessToken(p: { appUserId: string; appId: string; scope: string; username: string; name: string }) {
+export async function issueAccessToken(p: { appUserId: string; appId: string; clientId: string; scope: string; username: string; name: string }) {
   const jti = randomBytes(16).toString('hex')
   const expiresIn = 3600
   const expiresAt = new Date(Date.now() + expiresIn * 1000)
-  const token = await new SignJWT({ sub: p.appUserId, username: p.username, name: p.name, scope: p.scope, aud: p.appId })
+  const token = await new SignJWT({ sub: p.appUserId, username: p.username, name: p.name, scope: p.scope, aud: p.appId, client_id: p.clientId })
     .setProtectedHeader({ alg: 'HS256' })
     .setJti(jti)
     .setIssuedAt()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { withSession } from '@/lib/middleware'
+import { dispatchAppWebhooks } from '@/lib/webhooks'
 
 type AppAccess = 'full' | 'collaborator' | null
 
@@ -130,6 +131,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   })
 
   const updated = await ownerApp(id, session.ownerId)
+  if (updated) {
+    dispatchAppWebhooks('app.updated', {
+      companyId: updated.company.id,
+      companyName: updated.company.name,
+      appId: updated.id,
+      appName: updated.name,
+      clientId: updated.clientId,
+      redirectUris: updated.redirectUris,
+      defaultRedirectUri: updated.defaultRedirectUri,
+      tenantSlug: updated.tenantSlug,
+      scopes: updated.scopes,
+    }).catch(() => {})
+  }
   return NextResponse.json({ ...updated, _access: 'full' })
 }
 

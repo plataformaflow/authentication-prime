@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { withSession } from '@/lib/middleware'
+import { dispatchAppWebhooks } from '@/lib/webhooks'
 
 export async function GET() {
   const { session, error } = await withSession()
@@ -67,5 +68,19 @@ export async function POST(req: NextRequest) {
   const app = await prisma.oAuthApp.create({
     data: { name: parsed.data.name, companyId: parsed.data.companyId, redirectUris: parsed.data.redirectUris, scopes: parsed.data.scopes, clientId, clientSecret },
   })
+
+  dispatchAppWebhooks('app.created', {
+    companyId: company.id,
+    companyName: company.name,
+    appId: app.id,
+    appName: app.name,
+    clientId,
+    clientSecret: rawSecret,
+    redirectUris: app.redirectUris,
+    defaultRedirectUri: app.defaultRedirectUri,
+    tenantSlug: app.tenantSlug,
+    scopes: app.scopes,
+  }).catch(() => {})
+
   return NextResponse.json({ ...app, clientSecret: rawSecret }, { status: 201 })
 }
