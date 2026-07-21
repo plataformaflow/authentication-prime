@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send, Settings, ImageIcon, KeyRound, AlertTriangle, Copy, Check, RefreshCw, Webhook as WebhookIcon, Plus, Power } from 'lucide-react'
+import { AppWindow, Users, CheckCircle2, XCircle, UserRound, Users2, Clock, ArrowRight, Trash2, Send, Settings, ImageIcon, KeyRound, AlertTriangle, Copy, Check, RefreshCw, Webhook as WebhookIcon, Plus, Power, RefreshCcw } from 'lucide-react'
 import { validateEmail, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
 import { StatCard } from '@/components/dashboard/stat-card'
@@ -491,6 +491,18 @@ function CompanyWebhooksSection({ companyId, webhooks, onUpdate }: {
     finally { setBusyId(null) }
   }
 
+  async function handleSync(webhookId: string) {
+    if (!confirm('Isso vai reenviar todas as aplicações desta empresa para este webhook. Como o secret de cada aplicação não fica guardado em texto puro, um novo será gerado agora e o anterior deixará de funcionar. Continuar?')) return
+    setBusyId(webhookId)
+    try {
+      const res = await fetch(`/api/companies/${companyId}/webhooks/${webhookId}/sync`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      toast.success(`${data.synced} de ${data.total} aplicaç${data.total !== 1 ? 'ões' : 'ão'} sincronizada${data.synced !== 1 ? 's' : ''}.`)
+    } catch { toast.error('Erro ao sincronizar aplicações.') }
+    finally { setBusyId(null) }
+  }
+
   function copySecret() {
     if (!newSecret) return
     navigator.clipboard.writeText(newSecret)
@@ -542,6 +554,11 @@ function CompanyWebhooksSection({ companyId, webhooks, onUpdate }: {
                 <p className="text-xs text-muted-foreground mt-0.5">{w.active ? 'Ativo' : 'Desativado'}</p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleSync(w.id)} disabled={busyId === w.id}
+                  title="Sincronizar aplicações existentes"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors disabled:opacity-60">
+                  <RefreshCcw className="w-3.5 h-3.5" />
+                </button>
                 <button onClick={() => handleToggle(w)} disabled={busyId === w.id}
                   title={w.active ? 'Desativar' : 'Ativar'}
                   className={`p-1.5 rounded-lg transition-colors disabled:opacity-60 ${w.active ? 'text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' : 'text-muted-foreground hover:bg-muted'}`}>
