@@ -49,7 +49,14 @@ export async function POST(req: NextRequest) {
   prisma.authEvent.create({ data: { appId: app.id, appUserId: user.id, event: 'login_success', ip } }).catch(() => {})
   const code = await generateAuthCode({ appUserId: user.id, appId: app.id, redirectUri, scope, codeChallenge, codeChallengeMethod })
   const redirectUrl = new URL(redirectUri)
-  if (app.applyTenantAfterLogin && app.tenantSlug) redirectUrl.hostname = `${app.tenantSlug}.${redirectUrl.hostname}`
+  if (app.applyTenantAfterLogin && app.tenantSlug) {
+    // tenantDomain (configurado explicitamente) é o domínio-base correto
+    // para aplicar o tenant. Sem ele, cai no host do próprio redirect_uri
+    // — mas isso está errado quando esse host já tem um subdomínio fixo
+    // (ex.: "app.primevisita.com.br" viraria "teste.app.primevisita.com.br"
+    // em vez de "teste.primevisita.com.br").
+    redirectUrl.hostname = `${app.tenantSlug}.${app.tenantDomain || redirectUrl.hostname}`
+  }
   redirectUrl.searchParams.set('code', code)
   if (state) redirectUrl.searchParams.set('state', state)
   if (user.mustChangePassword) redirectUrl.searchParams.set('must_change_password', '1')

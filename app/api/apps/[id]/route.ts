@@ -85,6 +85,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     tenantSlug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).min(2).max(63).optional().or(z.literal('')),
     applyTenantAfterLogin: z.boolean().optional(),
     defaultRedirectUri: z.string().url().optional().or(z.literal('')),
+    tenantDomain: z.string().regex(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i, 'Informe um domínio válido, sem protocolo (ex.: primevisita.com.br).').max(253).optional().or(z.literal('')),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
 
@@ -118,6 +119,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.scopes) data.scopes = parsed.data.scopes
   if (parsed.data.tenantSlug !== undefined) data.tenantSlug = parsed.data.tenantSlug || null
   if (parsed.data.applyTenantAfterLogin !== undefined) data.applyTenantAfterLogin = parsed.data.applyTenantAfterLogin
+  if (parsed.data.tenantDomain !== undefined) data.tenantDomain = parsed.data.tenantDomain || null
   if (parsed.data.defaultRedirectUri !== undefined) {
     data.defaultRedirectUri = parsed.data.defaultRedirectUri || null
   } else if (parsed.data.redirectUris && current?.defaultRedirectUri && !parsed.data.redirectUris.includes(current.defaultRedirectUri)) {

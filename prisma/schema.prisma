@@ -78,6 +78,13 @@ model OAuthApp {
   tenantSlug            String?
   applyTenantAfterLogin Boolean                 @default(false)
   defaultRedirectUri    String?
+  // Domínio-base onde o tenant é aplicado como subdomínio (ex.:
+  // "primevisita.com.br" → "teste.primevisita.com.br"). Quando não
+  // definido, cai no comportamento antigo de prefixar o host do
+  // redirect_uri padrão — o que produz resultados errados quando esse
+  // host já tem seu próprio subdomínio (ex.: "app.primevisita.com.br"
+  // viraria "teste.app.primevisita.com.br").
+  tenantDomain          String?
   companyId             String
   company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users                 AppUser[]

@@ -22,7 +22,7 @@ interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEdit
 interface AppDetail {
   id: string; name: string; logoUrl?: string; description?: string
   clientId?: string; scopes: string[]; redirectUris?: string[]
-  tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null
+  tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null; tenantDomain?: string | null
   company: { id: string; name: string }; createdAt: string
   _access: 'full' | 'collaborator'
   _permissions?: AppPerms
@@ -430,6 +430,7 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
   const [tenantSlug, setTenantSlug] = useState(app.tenantSlug ?? '')
   const [applyTenantAfterLogin, setApplyTenantAfterLogin] = useState(app.applyTenantAfterLogin ?? false)
   const [defaultRedirectUri, setDefaultRedirectUri] = useState(app.defaultRedirectUri ?? '')
+  const [tenantDomain, setTenantDomain] = useState(app.tenantDomain ?? '')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -446,12 +447,13 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
     try {
       const res = await fetch(`/api/apps/${app.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantSlug, applyTenantAfterLogin, defaultRedirectUri }),
+        body: JSON.stringify({ tenantSlug, applyTenantAfterLogin, defaultRedirectUri, tenantDomain }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      onUpdate({ ...app, tenantSlug: data.tenantSlug, applyTenantAfterLogin: data.applyTenantAfterLogin, defaultRedirectUri: data.defaultRedirectUri })
+      onUpdate({ ...app, tenantSlug: data.tenantSlug, applyTenantAfterLogin: data.applyTenantAfterLogin, defaultRedirectUri: data.defaultRedirectUri, tenantDomain: data.tenantDomain })
       setDefaultRedirectUri(data.defaultRedirectUri ?? '')
+      setTenantDomain(data.tenantDomain ?? '')
       toast.success('Configurações de tenant salvas!')
     } catch { toast.error('Erro ao salvar.') }
     finally { setSaving(false) }
@@ -471,7 +473,7 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
             className="w-full h-10 px-3 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
           {error && <p className="text-xs text-destructive">{error}</p>}
           {tenantSlug && !error && (
-            <p className="text-xs text-muted-foreground">Prévia: <code className="font-mono">{tenantSlug}.suaaplicacao.com</code></p>
+            <p className="text-xs text-muted-foreground">Prévia: <code className="font-mono">{tenantSlug}.{tenantDomain || 'suaaplicacao.com'}</code></p>
           )}
         </div>
 
@@ -486,6 +488,18 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
             </span>
           </span>
         </label>
+
+        <div className="space-y-1.5 pt-1 border-t border-border">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-3 block">Domínio para o tenant</label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Domínio-base onde o tenant é aplicado (ex.: <code className="font-mono">primevisita.com.br</code> → <code className="font-mono">teste.primevisita.com.br</code>).
+            Deixe em branco para usar o host da URI de redirecionamento padrão — mas isso produz resultado errado se esse host já tiver seu próprio subdomínio
+            (ex.: <code className="font-mono">app.primevisita.com.br</code> viraria <code className="font-mono">teste.app.primevisita.com.br</code>). Defina aqui sempre que a aplicação viver num subdomínio fixo.
+          </p>
+          <input type="text" maxLength={253} value={tenantDomain} placeholder="primevisita.com.br"
+            onChange={e => { setTenantDomain(e.target.value.trim().toLowerCase()); setError('') }}
+            className="w-full h-10 px-3 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+        </div>
 
         <div className="space-y-1.5 pt-1 border-t border-border">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-3 block">URI de redirecionamento padrão</label>
