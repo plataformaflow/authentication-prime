@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { encryptSecret } from '@/lib/secretCrypto'
 import { withSession } from '@/lib/middleware'
 import { dispatchAppWebhooks } from '@/lib/webhooks'
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   if (!company) return NextResponse.json({ error: 'Empresa não encontrada.' }, { status: 404 })
   const clientId = randomBytes(16).toString('hex')
   const rawSecret = randomBytes(24).toString('hex')
-  const clientSecret = await hashPassword(rawSecret)
+  const clientSecret = encryptSecret(rawSecret)
   const app = await prisma.oAuthApp.create({
     data: { name: parsed.data.name, companyId: parsed.data.companyId, redirectUris: parsed.data.redirectUris, scopes: parsed.data.scopes, clientId, clientSecret },
   })

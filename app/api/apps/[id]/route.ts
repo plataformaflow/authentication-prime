@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { withSession } from '@/lib/middleware'
 import { dispatchAppWebhooks } from '@/lib/webhooks'
+import { tryDecryptSecret } from '@/lib/secretCrypto'
 
 type AppAccess = 'full' | 'collaborator' | null
 
@@ -50,7 +51,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     })
   }
 
-  return NextResponse.json({ ...app, _access: 'full' })
+  // Nunca devolve o clientSecret armazenado (criptografado ou hash legado) — só a versão decifrada, quando disponível.
+  const { clientSecret: storedSecret, ...appPublic } = app
+  return NextResponse.json({ ...appPublic, clientSecret: tryDecryptSecret(storedSecret), _access: 'full' })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

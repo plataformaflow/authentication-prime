@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { encryptSecret } from '@/lib/secretCrypto'
 import { withSession } from '@/lib/middleware'
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +13,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   })
   if (!app) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   const rawSecret = randomBytes(24).toString('hex')
-  await prisma.oAuthApp.update({ where: { id }, data: { clientSecret: await hashPassword(rawSecret) } })
+  await prisma.oAuthApp.update({ where: { id }, data: { clientSecret: encryptSecret(rawSecret) } })
   return NextResponse.json({ clientSecret: rawSecret })
 }

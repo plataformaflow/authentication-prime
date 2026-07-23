@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   Settings, Users, BarChart3, Copy, Check, RefreshCw, Trash2, CheckCircle2, XCircle,
   Users2, Zap, Plus, KeyRound, AlertTriangle, UserPlus, X, Mail, Shield,
-  ArrowRightLeft, ImageIcon, Activity, Clock, Pencil, ChevronDown, Download, Globe,
+  ArrowRightLeft, ImageIcon, Activity, Clock, Pencil, ChevronDown, Download, Globe, Eye, EyeOff,
 } from 'lucide-react'
 import { validateName, validateTenantSlug, slugify, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
@@ -21,7 +21,7 @@ const SCOPES = ['openid', 'profile', 'email']
 interface AppPerms { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null }
 interface AppDetail {
   id: string; name: string; logoUrl?: string; description?: string
-  clientId?: string; scopes: string[]; redirectUris?: string[]
+  clientId?: string; clientSecret?: string | null; scopes: string[]; redirectUris?: string[]
   tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null; tenantDomain?: string | null
   company: { id: string; name: string }; createdAt: string
   _access: 'full' | 'collaborator'
@@ -316,6 +316,8 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
   const [saving, setSaving] = useState(false)
   const [newSecret, setNewSecret] = useState('')
   const [copied, setCopied] = useState(false)
+  const [showSecret, setShowSecret] = useState(false)
+  const [secretCopied, setSecretCopied] = useState(false)
 
   function toggleScope(s: string) {
     setForm(p => ({ ...p, scopes: p.scopes.includes(s) ? p.scopes.filter(x => x !== s) : [...p.scopes, s] }))
@@ -327,12 +329,21 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function copySecretValue() {
+    if (!app.clientSecret) return
+    navigator.clipboard.writeText(app.clientSecret)
+    setSecretCopied(true)
+    setTimeout(() => setSecretCopied(false), 2000)
+  }
+
   async function handleRotate() {
     if (!confirm('Rotacionar o Client Secret invalidará integrações existentes. Continuar?')) return
     const res = await fetch(`/api/apps/${app.id}/rotate-secret`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error('Erro ao rotacionar.'); return }
     setNewSecret(data.clientSecret)
+    onUpdate({ ...app, clientSecret: data.clientSecret })
+    setShowSecret(false)
     toast.success('Secret rotacionado!')
   }
 
@@ -370,6 +381,25 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
               {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client Secret</label>
+          {app.clientSecret ? (
+            <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+              <code className="text-sm font-mono text-foreground flex-1 truncate">
+                {showSecret ? app.clientSecret : '•'.repeat(24)}
+              </code>
+              <button onClick={() => setShowSecret(s => !s)} title={showSecret ? 'Ocultar' : 'Visualizar'}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+              <button onClick={copySecretValue} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                {secretCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Token gerado antes desta atualização — rotacione para poder visualizá-lo aqui.</p>
+          )}
         </div>
         {newSecret && (
           <div className="space-y-2">

@@ -492,13 +492,14 @@ function CompanyWebhooksSection({ companyId, webhooks, onUpdate }: {
   }
 
   async function handleSync(webhookId: string) {
-    if (!confirm('Isso vai reenviar todas as aplicações desta empresa para este webhook. Como o secret de cada aplicação não fica guardado em texto puro, um novo será gerado agora e o anterior deixará de funcionar. Continuar?')) return
+    if (!confirm('Isso vai reenviar todas as aplicações desta empresa para este webhook, usando o client secret já existente de cada uma. Nenhum secret é alterado ou rotacionado. Continuar?')) return
     setBusyId(webhookId)
     try {
       const res = await fetch(`/api/companies/${companyId}/webhooks/${webhookId}/sync`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      toast.success(`${data.synced} de ${data.total} aplicaç${data.total !== 1 ? 'ões' : 'ão'} sincronizada${data.synced !== 1 ? 's' : ''}.`)
+      const pendingNote = data.pendingRotation > 0 ? ` ${data.pendingRotation} enviada${data.pendingRotation !== 1 ? 's' : ''} sem secret (rotacione manualmente para habilitar).` : ''
+      toast.success(`${data.synced} de ${data.total} aplicaç${data.total !== 1 ? 'ões' : 'ão'} sincronizada${data.synced !== 1 ? 's' : ''}.${pendingNote}`)
     } catch { toast.error('Erro ao sincronizar aplicações.') }
     finally { setBusyId(null) }
   }

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { tryDecryptSecret } from '@/lib/secretCrypto'
 import { withSession } from '@/lib/middleware'
 import { sendAppToWebhook } from '@/lib/webhooks'
 
-// Reenvia todas as aplicações já existentes da empresa para um webhook
-// específico. Como o servidor só guarda o hash do client_secret, cada
-// aplicação tem seu secret rotacionado aqui para poder ser enviado em texto
-// puro — isso invalida o secret anterior de cada uma.
+// Reenvia todas as aplicações já existentes da empresa para um webhook específico,
+// usando o client_secret decifrado a partir do valor já armazenado. Esta rota NUNCA
+// grava nada em oAuthApp — o secret de uma aplicação só muda quando o usuário aciona
+// a rotação manualmente. Aplicações cujo secret ainda está no formato legado (hash
+// bcrypt, irreversível) simplesmente não têm o secret incluído no envio; o dono
+// precisa rotacionar aquela aplicação especificamente, por conta própria, para que
+// ela passe a ser sincronizável com secret.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string; webhookId: string }> }) {
   const { session, error } = await withSession()
   if (error) return error
@@ -23,9 +25,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const apps = await prisma.oAuthApp.findMany({ where: { companyId: id } })
 
   let synced = 0
+  let pendingRotation = 0
   for (const app of apps) {
-    const rawSecret = randomBytes(24).toString('hex')
-    await prisma.oAuthApp.update({ where: { id: app.id }, data: { clientSecret: await hashPassword(rawSecret) } })
+    const rawSecret = tryDecryptSecret(app.clientSecret)
+    if (rawSecret === null) pendingRotation++
 
     try {
       await sendAppToWebhook(webhook, {
@@ -34,7 +37,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         appId: app.id,
         appName: app.name,
         clientId: app.clientId,
-        clientSecret: rawSecret,
+        clientSecret: rawSecret ?? undefined,
         redirectUris: app.redirectUris,
         defaultRedirectUri: app.defaultRedirectUri,
         tenantSlug: app.tenantSlug,
@@ -42,11 +45,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       })
       synced++
     } catch { /* melhor esforço — segue para as próximas aplicações */ }
-
-    await prisma.appAuditLog.create({
-      data: { appId: app.id, actorId: session.ownerId, action: 'app.secret_rotated_sync', meta: webhook.url },
-    }).catch(() => {})
   }
 
-  return NextResponse.json({ ok: true, synced, total: apps.length })
+  return NextResponse.json({ ok: true, synced, total: apps.length, pendingRotation })
 }

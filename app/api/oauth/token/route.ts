@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyPassword } from '@/lib/password'
+import { verifyClientSecret } from '@/lib/secretCrypto'
 import { verifyAuthCode } from '@/lib/oauth/code'
 import { issueAccessToken, issueRefreshToken, verifyRefreshToken, revokeRefreshTokenRaw } from '@/lib/oauth/token'
 import { verifyCodeChallenge } from '@/lib/oauth/pkce'
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!clientId || !clientSecret) return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
 
   const app = await prisma.oAuthApp.findUnique({ where: { clientId } })
-  if (!app || !(await verifyPassword(clientSecret, app.clientSecret)))
+  if (!app || !(await verifyClientSecret(clientSecret, app.clientSecret)))
     return NextResponse.json({ error: 'invalid_client' }, { status: 401 })
 
   const grantType = body.grant_type
