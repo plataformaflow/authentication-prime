@@ -243,7 +243,7 @@ function OAuthLoginForm() {
         <div className="px-8 pb-7 space-y-4">
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-            <span className="text-xs text-slate-400">ou</span>
+            <span className="text-xs text-slate-400">{appInfo?.companyName}</span>
             <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
           </div>
           <div className="flex items-center justify-center gap-2">
