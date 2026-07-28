@@ -134,7 +134,7 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
         subtitle={`${apps.length} aplicaç${apps.length !== 1 ? 'ões' : 'ão'} cadastrada${apps.length !== 1 ? 's' : ''}`}
         action={
           <button onClick={() => { setShowCreate(true); setCreatedSecret('') }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all">
             <Plus className="w-3.5 h-3.5" /> Nova aplicação
           </button>
         }
@@ -144,7 +144,7 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {([['apps', 'Aplicações'], ['invites', `Convites${invites.length > 0 ? ` (${invites.length})` : ''}`]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             {label}
           </button>
         ))}
@@ -267,7 +267,7 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar aplicação'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}

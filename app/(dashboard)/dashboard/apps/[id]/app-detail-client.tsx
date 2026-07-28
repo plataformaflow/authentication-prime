@@ -99,7 +99,7 @@ export function AppDetailClient({ id, initialApp, initialAnalytics }: {
         <div className="flex gap-0 min-w-max">
           {tabs.map(([key, label, Icon]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === key ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Icon className="w-3.5 h-3.5" /> {label}
             </button>
           ))}
@@ -150,7 +150,7 @@ function DeleteConfirmModal({ name, label, onConfirm, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
         <div className="h-1 bg-destructive" />
         <div className="p-6 space-y-4">
           <div className="flex items-start gap-3">
@@ -262,7 +262,7 @@ function AppProfileTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDet
 
   return (
     <div className="space-y-4 max-w-lg">
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
         <h3 className="font-semibold text-sm flex items-center gap-2"><ImageIcon className="w-4 h-4 text-muted-foreground" /> Perfil da aplicação</h3>
 
         {/* Preview */}
@@ -296,7 +296,7 @@ function AppProfileTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDet
             <span className="text-xs text-muted-foreground">{form.description.length}/500</span>
           </div>
           <button type="submit" disabled={saving}
-            className="w-full h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+            className="w-full h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
             {saving ? 'Salvando...' : 'Salvar perfil'}
           </button>
         </form>
@@ -371,7 +371,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
   return (
     <div className="space-y-4 max-w-lg">
       {/* Credentials */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
         <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Credenciais</h3>
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client ID</label>
@@ -443,7 +443,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
             </div>
           </div>
           <button type="submit" disabled={saving}
-            className="px-4 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+            className="px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
             {saving ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </form>
@@ -490,7 +490,7 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
+    <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
       <h3 className="font-semibold text-sm flex items-center gap-2"><Globe className="w-4 h-4 text-muted-foreground" /> Tenant</h3>
       <p className="text-xs text-muted-foreground leading-relaxed">
         Defina um identificador único de tenant para esta aplicação. Ele pode ser aplicado como subdomínio no redirecionamento após o login.
@@ -551,7 +551,7 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
         </div>
 
         <button type="submit" disabled={saving}
-          className="px-4 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+          className="px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
           {saving ? 'Salvando...' : 'Salvar tenant'}
         </button>
       </form>
@@ -672,7 +672,7 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
           ))}
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar usuário'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
@@ -716,7 +716,7 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={editLoading}
-              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {editLoading ? 'Salvando...' : 'Salvar'}
             </button>
             <button type="button" onClick={() => setEditUser(null)}
@@ -725,7 +725,7 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
         </form>
       </Modal>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         {users.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">
             <Users className="w-6 h-6 mx-auto mb-2 opacity-40" />
@@ -915,7 +915,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
 
   return (
     <div className="space-y-4 max-w-lg">
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm shadow-[#1a2550]/5">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">Convidar colaborador</h3>
@@ -988,7 +988,7 @@ function AppCollaboratorsTab({ appId }: { appId: string }) {
       )}
 
       {invites.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           <div className="px-5 py-3 border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">Convites pendentes</div>
           {invites.map(inv => (
             <div key={inv.id} className="flex items-center justify-between px-5 py-3 border-b border-border last:border-0">
@@ -1298,12 +1298,12 @@ function AppActivityTab({ appId, appName }: { appId: string; appName: string }) 
 <title>Histórico de Atividade — ${appName}</title>
 <style>
   body{font-family:system-ui,sans-serif;font-size:11px;color:#111;margin:24px}
-  h1{font-size:15px;font-weight:700;color:#1a2f6b;margin:0 0 4px}
+  h1{font-size:15px;font-weight:700;color:#2563eb;margin:0 0 4px}
   .sub{color:#6b7280;font-size:10px;margin-bottom:16px}
   table{width:100%;border-collapse:collapse}
-  th{background:#f1f4fb;color:#1a2550;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;text-align:left;border-bottom:2px solid #dce5f5}
+  th{background:#f5f8ff;color:#1e3a8a;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0}
   td{padding:6px 8px;border-bottom:1px solid #eef1f9;vertical-align:top}
-  .badge{display:inline-block;font-size:9px;font-weight:600;background:#e8eef8;color:#1a2550;padding:2px 6px;border-radius:9999px}
+  .badge{display:inline-block;font-size:9px;font-weight:600;background:#f5f8ff;color:#1e3a8a;padding:2px 6px;border-radius:9999px}
   .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;padding:4px 0 2px;border-top:1px solid #eef1f9}
   .detail-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#6b7280}
   .detail-value{font-size:9px;color:#111;word-break:break-all}
@@ -1345,7 +1345,7 @@ function AppActivityTab({ appId, appName }: { appId: string; appName: string }) 
   return (
     <div className="space-y-3">
       {/* Filters */}
-      <div className="bg-card border border-border rounded-2xl p-4 shadow-sm shadow-[#1a2550]/5">
+      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1 min-w-[130px]">
             <label className="text-xs font-medium text-muted-foreground">De</label>
@@ -1375,7 +1375,7 @@ function AppActivityTab({ appId, appName }: { appId: string; appName: string }) 
           </div>
           <div className="flex gap-2">
             <button onClick={load}
-              className="h-9 px-4 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-medium rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
+              className="h-9 px-4 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium rounded-lg shadow-sm transition-all">
               Filtrar
             </button>
             <button onClick={() => { setFilters({ from: '', to: '', actorId: '', action: '' }); setTimeout(load, 0) }}
@@ -1412,16 +1412,16 @@ function AppActivityTab({ appId, appName }: { appId: string; appName: string }) 
 
       {/* List */}
       {loading ? (
-        <div className="bg-card border border-border rounded-2xl px-5 py-10 text-center text-sm text-muted-foreground shadow-sm shadow-[#1a2550]/5">
+        <div className="bg-card border border-border rounded-xl px-5 py-10 text-center text-sm text-muted-foreground shadow-sm">
           Carregando atividade...
         </div>
       ) : logs.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl text-center py-12 text-muted-foreground text-sm shadow-sm shadow-[#1a2550]/5">
+        <div className="bg-card border border-border rounded-xl text-center py-12 text-muted-foreground text-sm shadow-sm">
           <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
           Nenhuma atividade encontrada.
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm shadow-[#1a2550]/5">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           {logs.map(log => <ActivityRow key={log.id} log={log} forceOpen={exportDetailed || undefined} />)}
         </div>
       )}

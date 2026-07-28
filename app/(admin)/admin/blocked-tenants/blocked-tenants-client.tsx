@@ -68,7 +68,7 @@ export function BlockedTenantsClient({ initialTenants }: { initialTenants: Block
               className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
           </div>
           <button type="submit" disabled={saving || !slug}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
             <Plus className="w-3.5 h-3.5" /> {saving ? 'Bloqueando...' : 'Bloquear'}
           </button>
         </form>

@@ -12,7 +12,7 @@ export function PageHeader({ title, subtitle, action }: PageHeaderProps) {
       <div className="flex items-center gap-3">
         <span className="w-1 h-7 rounded-full bg-[#d4a847] opacity-80 shrink-0" />
         <div>
-          <h1 className="text-xl font-bold text-[#1a2550] dark:text-foreground">{title}</h1>
+          <h1 className="text-xl font-bold text-[#1e3a8a] dark:text-foreground">{title}</h1>
           {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
       </div>

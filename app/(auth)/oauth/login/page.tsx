@@ -98,12 +98,12 @@ function OAuthLoginForm() {
   if (validationError) {
     return (
       <PageShell isDark={isDark} onToggle={toggleTheme}>
-        <div className="bg-white dark:bg-[#13151f] rounded-2xl shadow-2xl shadow-black/10 p-8 flex flex-col items-center text-center gap-4">
+        <div className="bg-white dark:bg-[#13151f] rounded-xl shadow-2xl shadow-black/10 p-8 flex flex-col items-center text-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center">
             <AlertTriangle className="w-7 h-7 text-red-500" />
           </div>
           <div>
-            <p className="font-bold text-[#1a2550] dark:text-white text-lg">Requisição inválida</p>
+            <p className="font-bold text-[#1e3a8a] dark:text-white text-lg">Requisição inválida</p>
             <p className="text-sm text-slate-500 mt-1">{validationError.message}</p>
           </div>
           <code className="w-full text-left bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 text-xs font-mono text-red-500">
@@ -118,7 +118,7 @@ function OAuthLoginForm() {
   if (redirecting) {
     return (
       <PageShell isDark={isDark} onToggle={toggleTheme}>
-        <div className="bg-white dark:bg-[#13151f] rounded-2xl shadow-2xl shadow-[#1a2550]/10 dark:shadow-black/40 px-8 py-12 flex flex-col items-center gap-5">
+        <div className="bg-white dark:bg-[#13151f] rounded-xl shadow-2xl dark:shadow-black/40 px-8 py-12 flex flex-col items-center gap-5">
           <div className="relative flex items-center justify-center">
             <div className="w-16 h-16 border-[3px] border-emerald-100 border-t-emerald-500 rounded-full animate-spin" />
             <svg className="absolute w-7 h-7 text-emerald-500" viewBox="0 0 24 24" fill="none">
@@ -126,7 +126,7 @@ function OAuthLoginForm() {
             </svg>
           </div>
           <div className="text-center space-y-1.5">
-            <p className="text-base font-bold text-[#1a2550] dark:text-white">Login realizado com sucesso!</p>
+            <p className="text-base font-bold text-[#1e3a8a] dark:text-white">Login realizado com sucesso!</p>
             <p className="text-sm text-slate-400 dark:text-slate-500">Redirecionando...</p>
           </div>
         </div>
@@ -137,7 +137,7 @@ function OAuthLoginForm() {
   return (
     <PageShell isDark={isDark} onToggle={toggleTheme}>
       {/* Card */}
-      <div className="bg-white dark:bg-[#13151f] rounded-2xl shadow-2xl shadow-[#1a2550]/10 dark:shadow-black/40 overflow-hidden">
+      <div className="bg-white dark:bg-[#13151f] rounded-xl shadow-2xl dark:shadow-black/40 overflow-hidden">
         <div className="px-8 pt-8 pb-7 space-y-6">
 
           {/* Logo pair: company → app */}
@@ -159,7 +159,7 @@ function OAuthLoginForm() {
 
           {/* Heading */}
           <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-bold text-[#1a2550] dark:text-white leading-tight">
+            <h1 className="text-2xl font-bold text-[#1e3a8a] dark:text-white leading-tight">
               Bem-vindo de volta!
             </h1>
             {appInfo && (
@@ -177,7 +177,7 @@ function OAuthLoginForm() {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* Username */}
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1a2550] dark:text-slate-200">Usuário</label>
+              <label className="text-sm font-semibold text-[#1e3a8a] dark:text-slate-200">Usuário</label>
               <div className="relative">
                 <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" viewBox="0 0 20 20" fill="none">
                   <circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
@@ -188,7 +188,7 @@ function OAuthLoginForm() {
                   onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase() }))}
                   placeholder="seu.usuario"
                   aria-invalid={!!errors.username}
-                  className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f1117] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all"
+                  className="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f172a] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all"
                 />
               </div>
               {errors.username && <p className="text-xs text-red-500">{errors.username}</p>}
@@ -197,7 +197,7 @@ function OAuthLoginForm() {
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-[#1a2550] dark:text-slate-200">Senha</label>
+                <label className="text-sm font-semibold text-[#1e3a8a] dark:text-slate-200">Senha</label>
                 <button type="button" onClick={() => setShowResetModal(true)}
                   className="text-xs text-indigo-500 hover:text-indigo-600 font-medium transition-colors">
                   Esqueci a senha
@@ -213,7 +213,7 @@ function OAuthLoginForm() {
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                   placeholder="••••••••"
                   aria-invalid={!!errors.password}
-                  className="w-full h-12 pl-10 pr-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f1117] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all"
+                  className="w-full h-12 pl-10 pr-11 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f172a] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all"
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
@@ -225,7 +225,7 @@ function OAuthLoginForm() {
 
             {/* Submit */}
             <button type="submit" disabled={loading}
-              className="w-full h-13 rounded-xl bg-[#1a2f6b] hover:bg-[#152560] active:scale-[0.98] text-white text-base font-semibold transition-all disabled:opacity-60 shadow-md shadow-[#1a2f6b]/30 flex items-center justify-center gap-2.5 mt-1" style={{height:'52px'}}>
+              className="w-full h-13 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white text-base font-semibold transition-all disabled:opacity-60 shadow-md flex items-center justify-center gap-2.5 mt-1" style={{height:'52px'}}>
               {loading ? (
                 <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -249,7 +249,7 @@ function OAuthLoginForm() {
           <div className="flex items-center justify-center gap-2">
             <PrimeAuthShieldSmall />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Autenticação segura por <span className="font-semibold text-[#1a2550] dark:text-slate-200">Prime Auth</span>
+              Autenticação segura por <span className="font-semibold text-[#1e3a8a] dark:text-slate-200">Prime Auth</span>
             </p>
           </div>
         </div>
@@ -267,7 +267,7 @@ function OAuthLoginForm() {
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowResetModal(false)} />
-          <div className="relative z-10 w-full max-w-sm bg-white dark:bg-[#13151f] rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative z-10 w-full max-w-sm bg-white dark:bg-[#13151f] rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -275,7 +275,7 @@ function OAuthLoginForm() {
                   <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                     <ShieldAlert className="w-5 h-5 text-amber-600" />
                   </div>
-                  <p className="font-semibold text-sm text-[#1a2550] dark:text-white">Redefinição de senha</p>
+                  <p className="font-semibold text-sm text-[#1e3a8a] dark:text-white">Redefinição de senha</p>
                 </div>
                 <button onClick={() => setShowResetModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
                   <X className="w-4 h-4" />
@@ -283,8 +283,8 @@ function OAuthLoginForm() {
               </div>
               <p className="text-sm text-slate-500 leading-relaxed mb-4">
                 Para redefinir sua senha, entre em contato com o{' '}
-                <strong className="text-[#1a2550] dark:text-white">administrador do sistema</strong> ou com a{' '}
-                <strong className="text-[#1a2550] dark:text-white">equipe de TI</strong> responsável por esta aplicação.
+                <strong className="text-[#1e3a8a] dark:text-white">administrador do sistema</strong> ou com a{' '}
+                <strong className="text-[#1e3a8a] dark:text-white">equipe de TI</strong> responsável por esta aplicação.
               </p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 leading-relaxed">
                 Eles poderão gerar um link seguro de redefinição e enviá-lo para você.
@@ -315,7 +315,7 @@ function PageShell({ children, isDark, onToggle }: { children: React.ReactNode; 
 
       {/* Decoration: dark navy + gold corner bottom-right */}
       <svg className="absolute bottom-0 right-0 w-52 h-52 pointer-events-none" viewBox="0 0 220 220" fill="none">
-        <path d="M220 60 L220 220 L60 220 Q220 220 220 60Z" fill="#1a2f6b" opacity="0.9"/>
+        <path d="M220 60 L220 220 L60 220 Q220 220 220 60Z" fill="#2563eb" opacity="0.9"/>
         <path d="M220 40 Q160 120 80 220" stroke="#d4a847" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
         <path d="M220 70 Q170 140 100 220" stroke="#d4a847" strokeWidth="1" strokeLinecap="round" opacity="0.3"/>
       </svg>
@@ -343,7 +343,7 @@ function LogoCircle({ src, fallbackLetter }: { src?: string | null; fallbackLett
       {src ? (
         <img src={src} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className="text-xl font-bold text-[#1a2f6b] dark:text-indigo-400">{fallbackLetter.toUpperCase()}</span>
+        <span className="text-xl font-bold text-[#2563eb] dark:text-indigo-400">{fallbackLetter.toUpperCase()}</span>
       )}
     </div>
   )
@@ -355,7 +355,7 @@ function LogoCircle({ src, fallbackLetter }: { src?: string | null; fallbackLett
 function PrimeAuthShieldSmall() {
   return (
     <svg viewBox="0 0 64 64" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 6 L54 15 L54 32 C54 44 44 54 32 58 C20 54 10 44 10 32 L10 15 Z" fill="#1a2f6b"/>
+      <path d="M32 6 L54 15 L54 32 C54 44 44 54 32 58 C20 54 10 44 10 32 L10 15 Z" fill="#2563eb"/>
       <path d="M32 9 L51 17 L51 32 C51 42 43 51 32 55 C21 51 13 42 13 32 L13 17 Z" fill="none" stroke="#d4a847" strokeWidth="1.5"/>
       <circle cx="32" cy="24" r="5" fill="#d4a847"/>
       <path d="M20 40 C20 34 25.5 30 32 30 C38.5 30 44 34 44 40" fill="#d4a847"/>

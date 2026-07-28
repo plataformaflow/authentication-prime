@@ -140,7 +140,7 @@ export function Sidebar({ userName, userEmail, isAdmin, mobileOpen, onMobileClos
 function PrimeAuthShield() {
   return (
     <svg viewBox="0 0 64 64" className="w-8 h-8 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 6 L54 15 L54 32 C54 44 44 54 32 58 C20 54 10 44 10 32 L10 15 Z" fill="#1a2f6b"/>
+      <path d="M32 6 L54 15 L54 32 C54 44 44 54 32 58 C20 54 10 44 10 32 L10 15 Z" fill="#2563eb"/>
       <path d="M32 9 L51 17 L51 32 C51 42 43 51 32 55 C21 51 13 42 13 32 L13 17 Z" fill="none" stroke="#d4a847" strokeWidth="1.5"/>
       <circle cx="32" cy="24" r="5" fill="#d4a847"/>
       <path d="M20 40 C20 34 25.5 30 32 30 C38.5 30 44 34 44 40" fill="#d4a847"/>

@@ -49,7 +49,7 @@ function ResetPasswordContent() {
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f2f8] dark:bg-[#0a0c12] p-4">
-        <div className="w-full max-w-sm bg-white dark:bg-[#13151f] rounded-2xl shadow-xl shadow-black/8 dark:shadow-black/40 overflow-hidden">
+        <div className="w-full max-w-sm bg-white dark:bg-[#13151f] rounded-xl shadow-xl shadow-black/8 dark:shadow-black/40 overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />
           <div className="p-8 flex flex-col items-center text-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
@@ -73,7 +73,7 @@ function ResetPasswordContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f0f2f8] dark:bg-[#0a0c12] p-4">
       <div className="w-full max-w-sm">
-        <div className="bg-white dark:bg-[#13151f] rounded-2xl shadow-xl shadow-black/8 dark:shadow-black/40 overflow-hidden">
+        <div className="bg-white dark:bg-[#13151f] rounded-xl shadow-xl shadow-black/8 dark:shadow-black/40 overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400" />
           <div className="p-8 space-y-6">
             <div className="text-center space-y-1">
@@ -87,7 +87,7 @@ function ResetPasswordContent() {
                   type="password" maxLength={128} autoComplete="new-password" value={form.newPassword}
                   onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))}
                   aria-invalid={!!errors.newPassword}
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-[#f8f9fb] dark:bg-[#0f1117] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
+                  className="w-full h-11 px-3 rounded-xl border border-border bg-[#f8f9fb] dark:bg-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
                 />
                 {errors.newPassword && <p className="text-xs text-destructive">{errors.newPassword}</p>}
               </div>
@@ -97,7 +97,7 @@ function ResetPasswordContent() {
                   type="password" maxLength={128} autoComplete="new-password" value={form.confirm}
                   onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))}
                   aria-invalid={!!errors.confirm}
-                  className="w-full h-11 px-3 rounded-xl border border-border bg-[#f8f9fb] dark:bg-[#0f1117] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
+                  className="w-full h-11 px-3 rounded-xl border border-border bg-[#f8f9fb] dark:bg-[#0f172a] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400"
                 />
                 {errors.confirm && <p className="text-xs text-destructive">{errors.confirm}</p>}
               </div>

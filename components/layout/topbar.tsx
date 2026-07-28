@@ -44,7 +44,7 @@ export function Topbar({ userName, userEmail, onMenuClick }: TopbarProps) {
           <Menu className="w-4 h-4" />
         </button>
         <span className="w-[3px] h-5 rounded-full bg-[#d4a847]" />
-        <h1 className="font-semibold text-sm text-[#1a2550] dark:text-foreground">{getTitle(pathname)}</h1>
+        <h1 className="font-semibold text-sm text-[#1e3a8a] dark:text-foreground">{getTitle(pathname)}</h1>
       </div>
       <div className="flex items-center gap-2">
         <button

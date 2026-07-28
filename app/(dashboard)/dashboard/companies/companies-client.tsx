@@ -128,7 +128,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
               <Search className="w-3.5 h-3.5" /> Solicitar acesso
             </button>
             <button onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#1a2f6b] hover:bg-[#152560] text-white rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all">
               <Plus className="w-3.5 h-3.5" /> Nova empresa
             </button>
           </>
@@ -139,7 +139,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {([['companies', 'Empresas'], ['invites', `Convites${invites.length > 0 ? ` (${invites.length})` : ''}`]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             {label}
           </button>
         ))}
@@ -149,7 +149,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
       <Modal open={showCreate} onClose={() => { setShowCreate(false); setFormErrors({}) }} title="Nova empresa" description="Preencha os dados para criar uma empresa">
         <form onSubmit={handleCreate} noValidate className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">Nome *</label>
+            <label className="text-sm font-semibold text-[#1e3a8a] dark:text-foreground">Nome *</label>
             <input type="text" maxLength={100} value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
               placeholder="Nome da empresa"
@@ -158,7 +158,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">{form.docType === 'cnpj' ? 'CNPJ' : 'CPF'} *</label>
+              <label className="text-sm font-semibold text-[#1e3a8a] dark:text-foreground">{form.docType === 'cnpj' ? 'CNPJ' : 'CPF'} *</label>
               <div className="flex rounded-lg border border-input overflow-hidden text-xs">
                 <button type="button" onClick={() => setForm(p => ({ ...p, docType: 'cnpj' }))}
                   className={`px-2.5 py-1 transition-colors ${form.docType === 'cnpj' ? 'bg-indigo-600 text-white' : 'hover:bg-muted text-muted-foreground'}`}>
@@ -185,7 +185,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
             {formErrors.cpf && <p className="text-xs text-destructive">{formErrors.cpf}</p>}
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">URL do logotipo</label>
+            <label className="text-sm font-semibold text-[#1e3a8a] dark:text-foreground">URL do logotipo</label>
             <input type="url" maxLength={500} value={form.logoUrl}
               onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
               placeholder="https://..."
@@ -193,7 +193,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
             {formErrors.logoUrl && <p className="text-xs text-destructive">{formErrors.logoUrl}</p>}
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">Descrição</label>
+            <label className="text-sm font-semibold text-[#1e3a8a] dark:text-foreground">Descrição</label>
             <textarea maxLength={500} value={form.description} rows={3}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
               placeholder="Descrição da empresa..."
@@ -204,7 +204,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
-              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar empresa'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
@@ -220,7 +220,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
         <form onSubmit={handleRequest} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-[#1a2550] dark:text-foreground">{requestDoc.type === 'cnpj' ? 'CNPJ' : 'CPF'} da empresa</label>
+              <label className="text-sm font-semibold text-[#1e3a8a] dark:text-foreground">{requestDoc.type === 'cnpj' ? 'CNPJ' : 'CPF'} da empresa</label>
               <div className="flex rounded-lg border border-input overflow-hidden text-xs">
                 <button type="button" onClick={() => setRequestDoc(p => ({ ...p, type: 'cnpj', value: '' }))}
                   className={`px-2.5 py-1 transition-colors ${requestDoc.type === 'cnpj' ? 'bg-indigo-600 text-white' : 'hover:bg-muted text-muted-foreground'}`}>
@@ -242,7 +242,7 @@ export function CompaniesClient({ initialCompanies, initialInvites, initialMyReq
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={loading}
-              className="flex-1 h-10 bg-[#1a2f6b] hover:bg-[#152560] text-white text-sm font-semibold rounded-xl shadow-sm shadow-[#1a2f6b]/20 transition-all disabled:opacity-60">
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {loading ? 'Enviando...' : 'Solicitar'}
             </button>
             <button type="button" onClick={() => { setShowRequest(false); setRequestDoc({ type: 'cnpj', value: '' }) }}
@@ -364,7 +364,7 @@ function CompanyCard({ company: c, onDelete }: {
   onDelete?: () => void
 }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-3 shadow-sm shadow-[#1a2550]/5 hover:shadow-md hover:shadow-[#1a2550]/8 hover:border-[#c4d2f2] dark:hover:border-indigo-800 transition-all">
+    <div className="bg-card border border-border rounded-xl p-5 space-y-3 shadow-sm hover:shadow-md hover:border-[#bfdbfe] dark:hover:border-indigo-800 transition-all">
       <div className="flex items-center gap-3">
         <AppAvatar name={c.name} logoUrl={c.logoUrl} size="md" className="rounded-xl" />
         <div className="min-w-0">
@@ -417,7 +417,7 @@ function DeleteConfirmModal({ name, label, description, items, onConfirm, onClos
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
         <div className="h-1 bg-destructive" />
         <div className="p-6 space-y-4">
           <div className="flex items-start gap-3">
