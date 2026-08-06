@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Plus, AppWindow, ArrowRight, Copy, Check, Building2, ChevronDown, ChevronRight, ArrowRightLeft, Mail, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, AppWindow, ArrowRight, Copy, Check, Building2, ChevronDown, ChevronRight, ArrowRightLeft, Mail, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react'
 import { validateName, validateScopes, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { PageHeader } from '@/components/layout/page-header'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
@@ -38,14 +38,18 @@ function censureCPF(cpf: string) {
   return `***.${clean.slice(3, 6)}.***-**`
 }
 
-export function AppsClient({ initialApps, initialCompanies, initialTransferRequests, initialInvites }: {
+export function AppsClient({ initialApps, initialCompanies, initialTransferRequests, initialInvites, initialOtherApps = [], isAdmin = false }: {
   initialApps: App[]
   initialCompanies: Company[]
   initialTransferRequests: TransferRequest[]
   initialInvites: CollabInvite[]
+  initialOtherApps?: App[]
+  isAdmin?: boolean
 }) {
   const [tab, setTab] = useState<PageTab>('apps')
   const [apps, setApps] = useState<App[]>(initialApps)
+  const [otherApps] = useState<App[]>(initialOtherApps)
+  const [otherOpen, setOtherOpen] = useState(false)
   const [companies] = useState<Company[]>(initialCompanies)
   const [invites, setInvites] = useState<CollabInvite[]>(initialInvites)
   const [showCreate, setShowCreate] = useState(false)
@@ -127,6 +131,14 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
   const groups = Object.values(grouped)
   const singleGroup = groups.length === 1
 
+  const otherGrouped = otherApps.reduce<Record<string, { company: CompanyInfo; apps: App[] }>>((acc, app) => {
+    const cid = app.company.id
+    if (!acc[cid]) acc[cid] = { company: app.company, apps: [] }
+    acc[cid].apps.push(app)
+    return acc
+  }, {})
+  const otherGroups = Object.values(otherGrouped)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -181,13 +193,20 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
             </div>
           )}
 
-          {apps.length === 0 ? (
+          {apps.length === 0 && !(isAdmin && otherGroups.length > 0) ? (
             <div className="text-center py-16 text-muted-foreground">
               <AppWindow className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm">Nenhum app encontrado.</p>
             </div>
           ) : (
             <div className="space-y-6">
+              {apps.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground">
+                  <AppWindow className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Você ainda não tem aplicações próprias.</p>
+                </div>
+              )}
+
               {groups.length > 0 && (
                 <div className="space-y-4">
                   {groups.map(({ company, apps: groupApps }) => (
@@ -206,6 +225,10 @@ export function AppsClient({ initialApps, initialCompanies, initialTransferReque
                     {collabApps.map(app => <AppCard key={app.id} app={app} />)}
                   </div>
                 </div>
+              )}
+
+              {isAdmin && otherGroups.length > 0 && (
+                <OtherAppsSection open={otherOpen} onToggle={() => setOtherOpen(o => !o)} groups={otherGroups} />
               )}
             </div>
           )}
@@ -322,6 +345,41 @@ function CompanyGroup({ company, apps, defaultOpen }: { company: CompanyInfo; ap
       {open && (
         <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {apps.map(app => <AppCard key={app.id} app={app} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Other companies' apps (superadmin) ────────────────────────────────────────
+
+function OtherAppsSection({ open, onToggle, groups }: {
+  open: boolean
+  onToggle: () => void
+  groups: Array<{ company: CompanyInfo; apps: App[] }>
+}) {
+  const totalApps = groups.reduce((n, g) => n + g.apps.length, 0)
+
+  return (
+    <div className="border border-dashed border-border rounded-xl overflow-hidden">
+      <button onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-muted/30 hover:bg-muted/60 transition-colors text-left group">
+        <ShieldCheck className="w-4 h-4 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">Outras aplicações</p>
+          <p className="text-[11px] text-muted-foreground">Aplicações de outras empresas — visível apenas para administradores</p>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground bg-background border border-border rounded-full px-2.5 py-0.5 shrink-0">
+          {groups.length} empresa{groups.length !== 1 ? 's' : ''} · {totalApps} app{totalApps !== 1 ? 's' : ''}
+        </span>
+        {open ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+      </button>
+
+      {open && (
+        <div className="p-3 space-y-3 bg-background">
+          {groups.map(({ company, apps: groupApps }) => (
+            <CompanyGroup key={company.id} company={company} apps={groupApps} defaultOpen={false} />
+          ))}
         </div>
       )}
     </div>

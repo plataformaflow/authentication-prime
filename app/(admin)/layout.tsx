@@ -1,17 +1,27 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
-import DashboardNav from '@/components/dashboard-nav'
+import { prisma } from '@/lib/prisma'
+import { DashboardShell } from '@/components/layout/dashboard-shell'
+import { AdminNav } from '@/components/layout/admin-nav'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect('/login')
   if (!session.isAdmin) redirect('/dashboard')
+
+  const owner = await prisma.owner.findUnique({
+    where: { id: session.ownerId },
+    select: { name: true, email: true },
+  })
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <DashboardNav isAdmin={true} />
-      <main className="flex-1 container max-w-7xl mx-auto px-4 py-8">
-        {children}
-      </main>
-    </div>
+    <DashboardShell
+      userName={owner?.name ?? 'Usuário'}
+      userEmail={owner?.email ?? ''}
+      isAdmin={session.isAdmin}
+    >
+      <AdminNav />
+      {children}
+    </DashboardShell>
   )
 }

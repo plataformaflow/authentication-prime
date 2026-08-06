@@ -62,12 +62,25 @@ export default async function AppsPage() {
       })
     : []
 
+  // Superadmin: apps de todas as outras empresas, para a seção "Outras aplicações".
+  let otherApps: typeof ownedApps = []
+  if (session.isAdmin) {
+    const notMineIds = new Set([...ownedIds, ...collabApps.map(a => a.id)])
+    const allApps = await prisma.oAuthApp.findMany({
+      include: appInclude,
+      orderBy: { createdAt: 'desc' },
+    })
+    otherApps = allApps.filter(a => !notMineIds.has(a.id) && a.company.id && !ownerCompanies.some(c => c.id === a.company.id))
+  }
+
   return (
     <AppsClient
       initialApps={JSON.parse(JSON.stringify(apps))}
       initialCompanies={ownerCompanies}
       initialTransferRequests={JSON.parse(JSON.stringify(transferRequests))}
       initialInvites={JSON.parse(JSON.stringify(invites))}
+      initialOtherApps={JSON.parse(JSON.stringify(otherApps.map(a => ({ ...a, _role: 'owner' as const }))))}
+      isAdmin={session.isAdmin}
     />
   )
 }

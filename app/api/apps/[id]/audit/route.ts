@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
 
   const app = await prisma.oAuthApp.findFirst({
-    where: { id, company: { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
+    where: { id, company: session.isAdmin ? undefined : { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
   })
   if (!app) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 

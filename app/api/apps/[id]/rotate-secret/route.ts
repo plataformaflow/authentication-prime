@@ -9,7 +9,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (error) return error
   const { id } = await params
   const app = await prisma.oAuthApp.findFirst({
-    where: { id, company: { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
+    where: { id, company: session.isAdmin ? undefined : { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
   })
   if (!app) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   const rawSecret = randomBytes(24).toString('hex')

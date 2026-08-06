@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { withSession } from '@/lib/middleware'
 
-async function getAppAccess(appId: string, ownerId: string): Promise<{ ok: boolean; isOwner: boolean; canEdit: boolean; canDelete: boolean }> {
+async function getAppAccess(appId: string, ownerId: string, isAdmin = false): Promise<{ ok: boolean; isOwner: boolean; canEdit: boolean; canDelete: boolean }> {
   const byCompany = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
   if (byCompany) return { ok: true, isOwner: true, canEdit: true, canDelete: true }
   const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId } } })
@@ -17,7 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { session, error } = await withSession()
   if (error) return error
   const { id, userId } = await params
-  const access = await getAppAccess(id, session.ownerId)
+  const access = await getAppAccess(id, session.ownerId, session.isAdmin)
   if (!access.ok) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   if (!access.canEdit) return NextResponse.json({ error: 'Sem permissão para editar usuários.' }, { status: 403 })
   const body = await req.json().catch(() => null)
@@ -43,7 +43,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { session, error } = await withSession()
   if (error) return error
   const { id, userId } = await params
-  const access2 = await getAppAccess(id, session.ownerId)
+  const access2 = await getAppAccess(id, session.ownerId, session.isAdmin)
   if (!access2.ok) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   if (!access2.canDelete) return NextResponse.json({ error: 'Sem permissão para excluir usuários.' }, { status: 403 })
   const user = await prisma.appUser.findUnique({ where: { id: userId }, select: { name: true } })

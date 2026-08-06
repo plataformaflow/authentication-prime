@@ -64,7 +64,10 @@ export default function LoginPage() {
             {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password">Senha</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Senha</Label>
+              <Link href="/forgot-password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Esqueci a senha</Link>
+            </div>
             <div className="relative">
               <Input
                 id="password" type={showPassword ? 'text' : 'password'} maxLength={128}

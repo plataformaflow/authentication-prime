@@ -5,9 +5,9 @@ import { AppDetailClient } from './app-detail-client'
 
 type AppAccess = 'full' | 'collaborator' | null
 
-async function getAppAccess(appId: string, ownerId: string): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null } }> {
+async function getAppAccess(appId: string, ownerId: string, isAdmin = false): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null } }> {
   const app = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
   if (app) return { access: 'full' }
   const collab = await prisma.appCollaborator.findUnique({
@@ -53,7 +53,7 @@ export default async function AppDetailPage({ params }: { params: Promise<{ id: 
   const { id } = await params
   const session = await requireSession()
 
-  const { access, collab } = await getAppAccess(id, session.ownerId)
+  const { access, collab } = await getAppAccess(id, session.ownerId, session.isAdmin)
   if (!access) redirect('/dashboard/apps')
 
   const app = await prisma.oAuthApp.findUnique({

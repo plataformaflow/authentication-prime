@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { withSession } from '@/lib/middleware'
 
-async function getAppAsCompanyUser(appId: string, ownerId: string) {
+async function getAppAsCompanyUser(appId: string, ownerId: string, isAdmin = false) {
   return prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
 }
 
@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const app = await getAppAsCompanyUser(id, session.ownerId)
+  const app = await getAppAsCompanyUser(id, session.ownerId, session.isAdmin)
   if (!app) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 
   const [collaborators, invites] = await Promise.all([
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const app = await getAppAsCompanyUser(id, session.ownerId)
+  const app = await getAppAsCompanyUser(id, session.ownerId, session.isAdmin)
   if (!app) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 
   const body = await req.json().catch(() => null)

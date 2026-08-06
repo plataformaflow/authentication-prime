@@ -7,9 +7,9 @@ import { tryDecryptSecret } from '@/lib/secretCrypto'
 
 type AppAccess = 'full' | 'collaborator' | null
 
-async function getAppAccess(appId: string, ownerId: string): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null } }> {
+async function getAppAccess(appId: string, ownerId: string, isAdmin = false): Promise<{ access: AppAccess; collab?: { canViewAnalytics: boolean; canCreateUsers: boolean; canEditUsers: boolean; canDeleteUsers: boolean; maxUsers: number | null } }> {
   const app = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
   if (app) return { access: 'full' }
   const collab = await prisma.appCollaborator.findUnique({
@@ -22,9 +22,9 @@ async function getAppAccess(appId: string, ownerId: string): Promise<{ access: A
   }
 }
 
-async function ownerApp(id: string, ownerId: string) {
+async function ownerApp(id: string, ownerId: string, isAdmin = false) {
   return prisma.oAuthApp.findFirst({
-    where: { id, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
     include: { company: true },
   })
 }
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const { access, collab } = await getAppAccess(id, session.ownerId)
+  const { access, collab } = await getAppAccess(id, session.ownerId, session.isAdmin)
   if (!access) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   const app = await prisma.oAuthApp.findUnique({
@@ -60,7 +60,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const { access } = await getAppAccess(id, session.ownerId)
+  const { access } = await getAppAccess(id, session.ownerId, session.isAdmin)
   if (!access) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   const body = await req.json().catch(() => null)
@@ -135,7 +135,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     data: { appId: id, actorId: session.ownerId, action: 'app.update', meta: JSON.stringify(Object.keys(data)) },
   })
 
-  const updated = await ownerApp(id, session.ownerId)
+  const updated = await ownerApp(id, session.ownerId, session.isAdmin)
   if (updated) {
     dispatchAppWebhooks('app.updated', {
       companyId: updated.company.id,

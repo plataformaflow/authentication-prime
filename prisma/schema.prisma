@@ -22,7 +22,20 @@ model Owner {
   transferRequests     AppTransferRequest[]   @relation("TransferRequests")
   auditActions         AppAuditLog[]          @relation("AuditActor")
   appUsersCreated      AppUser[]              @relation("AppUserCreator")
+  passwordResets       OwnerPasswordReset[]
   createdAt            DateTime               @default(now())
+}
+
+model OwnerPasswordReset {
+  id        String   @id @default(cuid()) @map("_id")
+  ownerId   String
+  owner     Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  codeHash  String
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  tokenHash String?  @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Company {

@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { withSession } from '@/lib/middleware'
 
-async function getAccess(appId: string, ownerId: string) {
+async function getAccess(appId: string, ownerId: string, isAdmin = false) {
   const byCompany = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
   if (byCompany) return { ok: true, isCollab: false, collab: null }
   const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId } } })
@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const { ok } = await getAccess(id, session.ownerId)
+  const { ok } = await getAccess(id, session.ownerId, session.isAdmin)
   if (!ok) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   const users = await prisma.appUser.findMany({
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { session, error } = await withSession()
   if (error) return error
   const { id } = await params
-  const { ok, isCollab, collab } = await getAccess(id, session.ownerId)
+  const { ok, isCollab, collab } = await getAccess(id, session.ownerId, session.isAdmin)
   if (!ok) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   if (isCollab && !collab!.canCreateUsers) {

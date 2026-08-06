@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return error
   const { id: appId } = await params
   const app = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
+    where: { id: appId, company: session.isAdmin ? undefined : { OR: [{ ownerId: session.ownerId }, { members: { some: { ownerId: session.ownerId } } }] } },
   })
   if (!app) {
     const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId: session.ownerId } } })

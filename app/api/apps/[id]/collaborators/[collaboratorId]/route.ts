@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { withSession } from '@/lib/middleware'
 
-async function ownerOnly(appId: string, ownerId: string) {
+async function ownerOnly(appId: string, ownerId: string, isAdmin = false) {
   return prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
 }
 
@@ -18,7 +18,7 @@ export async function PATCH(
   if (error) return error
   const { id, collaboratorId } = await params
 
-  const app = await ownerOnly(id, session.ownerId)
+  const app = await ownerOnly(id, session.ownerId, session.isAdmin)
   if (!app) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 
   const body = await req.json().catch(() => null)
@@ -58,7 +58,7 @@ export async function DELETE(
   if (error) return error
   const { id, collaboratorId } = await params
 
-  const app = await ownerOnly(id, session.ownerId)
+  const app = await ownerOnly(id, session.ownerId, session.isAdmin)
   if (!app) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 
   const [collab, invite] = await Promise.all([

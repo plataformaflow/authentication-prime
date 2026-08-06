@@ -5,9 +5,9 @@ import { withSession } from '@/lib/middleware'
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
-async function hasAppAccess(appId: string, ownerId: string) {
+async function hasAppAccess(appId: string, ownerId: string, isAdmin = false) {
   const byCompany = await prisma.oAuthApp.findFirst({
-    where: { id: appId, company: { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
+    where: { id: appId, company: isAdmin ? undefined : { OR: [{ ownerId }, { members: { some: { ownerId } } }] } },
   })
   if (byCompany) return true
   const collab = await prisma.appCollaborator.findUnique({ where: { appId_ownerId: { appId, ownerId } } })
@@ -18,7 +18,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const { session, error } = await withSession()
   if (error) return error
   const { id, userId } = await params
-  if (!(await hasAppAccess(id, session.ownerId))) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
+  if (!(await hasAppAccess(id, session.ownerId, session.isAdmin))) return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
 
   const user = await prisma.appUser.findUnique({ where: { id: userId }, select: { name: true } })
   const raw = randomBytes(36).toString('hex')

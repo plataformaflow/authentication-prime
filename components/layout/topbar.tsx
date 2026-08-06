@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/users': 'Usuários',
   '/admin/companies': 'Empresas',
   '/admin/apps': 'Aplicações',
+  '/admin/blocked-tenants': 'Tenants bloqueados',
 }
 
 function getTitle(pathname: string): string {
