@@ -8,6 +8,7 @@ import {
   Settings, Users, BarChart3, Copy, Check, RefreshCw, Trash2, CheckCircle2, XCircle,
   Users2, Zap, Plus, KeyRound, AlertTriangle, UserPlus, X, Mail, Shield,
   ArrowRightLeft, ImageIcon, Activity, Clock, Pencil, ChevronDown, Download, Globe, Eye, EyeOff,
+  Webhook, Wand2,
 } from 'lucide-react'
 import { validateName, validateTenantSlug, slugify, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 import { AppAvatar } from '@/components/dashboard/app-avatar'
@@ -23,6 +24,7 @@ interface AppDetail {
   id: string; name: string; logoUrl?: string; description?: string
   clientId?: string; clientSecret?: string | null; scopes: string[]; redirectUris?: string[]
   tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null; tenantDomain?: string | null
+  userWebhookEnabled?: boolean; userWebhookUrl?: string | null; userWebhookSecret?: string | null
   company: { id: string; name: string }; createdAt: string
   _access: 'full' | 'collaborator'
   _permissions?: AppPerms
@@ -450,6 +452,132 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
       </div>
 
       <AppTenantSection app={app} onUpdate={onUpdate} />
+      <AppUserWebhookSection app={app} onUpdate={onUpdate} />
+    </div>
+  )
+}
+
+// ─── User Webhook Section ────────────────────────────────────────────────────
+// Notifica um sistema externo (hoje só o Prime Visita) sempre que um AppUser
+// é criado nesta aplicação — desativado por padrão, só pode ser ativado com
+// tenant + URL + token já definidos (ver validação equivalente em
+// api/apps/[id]/route.ts).
+
+function generateWebhookSecret(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function AppUserWebhookSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
+  const [enabled, setEnabled] = useState(app.userWebhookEnabled ?? false)
+  const [url, setUrl] = useState(app.userWebhookUrl ?? '')
+  const [secret, setSecret] = useState(app.userWebhookSecret ?? '')
+  const [showSecret, setShowSecret] = useState(false)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  const hasTenant = !!app.tenantSlug
+  // Reflete o que está SALVO (não o rascunho do formulário) — sincronizar
+  // deve usar a configuração já ativa, não uma edição ainda não confirmada.
+  const canSync = !!app.tenantSlug && !!app.userWebhookEnabled && !!app.userWebhookUrl && !!app.userWebhookSecret
+
+  async function handleSave(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (enabled && !hasTenant) { setError('Defina um identificador de tenant antes de ativar essa opção.'); return }
+    if (enabled && (!url || !secret)) { setError('Informe a URL e o token antes de ativar.'); return }
+    setError('')
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/apps/${app.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userWebhookEnabled: enabled, userWebhookUrl: url, userWebhookSecret: secret }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate({ ...app, userWebhookEnabled: data.userWebhookEnabled, userWebhookUrl: data.userWebhookUrl, userWebhookSecret: data.userWebhookSecret })
+      toast.success('Webhook de usuários salvo!')
+    } catch { toast.error('Erro ao salvar.') }
+    finally { setSaving(false) }
+  }
+
+  async function handleSync() {
+    setSyncing(true)
+    try {
+      const res = await fetch(`/api/apps/${app.id}/sync-users-webhook`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      toast.success(`${data.synced} de ${data.total} usuário(s) sincronizado(s).`)
+    } catch { toast.error('Erro ao sincronizar.') }
+    finally { setSyncing(false) }
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
+      <h3 className="font-semibold text-sm flex items-center gap-2"><Webhook className="w-4 h-4 text-muted-foreground" /> Webhook de usuários</h3>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Notifica automaticamente a URL abaixo sempre que um usuário novo é criado nesta aplicação. Não é um webhook
+        público — não aparece em nenhuma documentação, é uma integração interna só entre esta aplicação e o sistema
+        de destino.
+      </p>
+      <form onSubmit={handleSave} noValidate className="space-y-4">
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+          <input type="checkbox" checked={enabled}
+            onChange={e => { setEnabled(e.target.checked); setError('') }}
+            className="mt-0.5 rounded accent-indigo-600" />
+          <span>
+            <span className="font-medium">Enviar novos usuários automaticamente</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">Desativado por padrão.</span>
+          </span>
+        </label>
+        {!hasTenant && (
+          <p className="text-xs text-amber-600 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Defina um identificador de tenant (acima) antes de ativar.
+          </p>
+        )}
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">URL do webhook</label>
+          <input type="url" value={url} placeholder="https://seu-dominio.com/api/webhooks/..."
+            onChange={e => { setUrl(e.target.value.trim()); setError('') }}
+            className="w-full h-10 px-3 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Token de segurança</label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input type={showSecret ? 'text' : 'password'} value={secret} placeholder="Token enviado como Authorization: Bearer"
+                onChange={e => { setSecret(e.target.value.trim()); setError('') }}
+                className="w-full h-10 px-3 pr-9 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+              <button type="button" onClick={() => setShowSecret(v => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <button type="button" onClick={() => { setSecret(generateWebhookSecret()); setShowSecret(true); setError('') }}
+              title="Gerar token aleatório"
+              className="shrink-0 flex items-center gap-1.5 px-3 h-10 text-xs border border-input rounded-xl hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+              <Wand2 className="w-3.5 h-3.5" /> Gerar
+            </button>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button type="submit" disabled={saving}
+            className="px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
+            {saving ? 'Salvando...' : 'Salvar webhook'}
+          </button>
+          <button type="button" onClick={handleSync} disabled={syncing || !canSync}
+            title={!canSync ? 'Salve o webhook ativado, com URL e token, primeiro.' : undefined}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-60">
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sincronizando...' : 'Sincronizar usuários'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { withSession } from '@/lib/middleware'
+import { dispatchUserCreatedWebhook, userWebhookTargetFor } from '@/lib/webhooks-users'
 
 async function getAccess(appId: string, ownerId: string, isAdmin = false) {
   const byCompany = await prisma.oAuthApp.findFirst({
@@ -80,6 +81,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await prisma.appAuditLog.create({
     data: { appId: id, actorId: session.ownerId, action: 'user.create', targetId: user.id, targetName: user.name, meta: JSON.stringify({ username }) },
   })
+
+  // Fire-and-forget — nunca atrasa/derruba a criação do usuário se o Prime
+  // Visita estiver fora do ar ou o webhook não estiver configurado/ativado.
+  const app = await prisma.oAuthApp.findUnique({
+    where: { id },
+    select: { clientId: true, tenantSlug: true, userWebhookEnabled: true, userWebhookUrl: true, userWebhookSecret: true },
+  })
+  const target = app ? userWebhookTargetFor(app) : null
+  if (app && target) {
+    void dispatchUserCreatedWebhook(target, { clientId: app.clientId, sub: user.id, username: user.username, name: user.name })
+  }
 
   return NextResponse.json(user, { status: 201 })
 }

@@ -98,6 +98,16 @@ model OAuthApp {
   // host já tem seu próprio subdomínio (ex.: "app.primevisita.com.br"
   // viraria "teste.app.primevisita.com.br").
   tenantDomain          String?
+  // Notifica um endpoint externo sempre que um AppUser é criado pra esta
+  // aplicação — desativado por padrão, e só dispara de fato quando
+  // tenantSlug também está definido (ver POST /api/apps/[id]/users). Token
+  // simples (Authorization: Bearer), não a assinatura HMAC do Webhook
+  // (model abaixo) — o destino não é um webhook genérico configurável pelo
+  // dono da empresa, é sempre o mesmo sistema (o Prime Visita), então não
+  // precisa da mesma flexibilidade.
+  userWebhookEnabled    Boolean                 @default(false)
+  userWebhookUrl        String?
+  userWebhookSecret     String?
   companyId             String
   company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users                 AppUser[]

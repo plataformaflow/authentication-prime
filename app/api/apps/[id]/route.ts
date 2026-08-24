@@ -89,6 +89,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     applyTenantAfterLogin: z.boolean().optional(),
     defaultRedirectUri: z.string().url().optional().or(z.literal('')),
     tenantDomain: z.string().regex(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i, 'Informe um domínio válido, sem protocolo (ex.: primevisita.com.br).').max(253).optional().or(z.literal('')),
+    userWebhookEnabled: z.boolean().optional(),
+    userWebhookUrl: z.string().url().optional().or(z.literal('')),
+    userWebhookSecret: z.string().min(16).max(200).optional().or(z.literal('')),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
 
@@ -99,14 +102,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (blocked) return NextResponse.json({ error: 'Este identificador de tenant não está disponível.' }, { status: 409 })
   }
 
-  const needsCurrent = parsed.data.applyTenantAfterLogin || parsed.data.defaultRedirectUri !== undefined || parsed.data.redirectUris
+  const needsCurrent =
+    parsed.data.applyTenantAfterLogin ||
+    parsed.data.userWebhookEnabled ||
+    parsed.data.defaultRedirectUri !== undefined ||
+    parsed.data.redirectUris
   const current = needsCurrent
-    ? await prisma.oAuthApp.findUnique({ where: { id }, select: { tenantSlug: true, redirectUris: true, defaultRedirectUri: true } })
+    ? await prisma.oAuthApp.findUnique({
+        where: { id },
+        select: { tenantSlug: true, redirectUris: true, defaultRedirectUri: true, userWebhookUrl: true, userWebhookSecret: true },
+      })
     : null
 
   if (parsed.data.applyTenantAfterLogin) {
     const effectiveSlug = parsed.data.tenantSlug !== undefined ? parsed.data.tenantSlug : current?.tenantSlug
     if (!effectiveSlug) return NextResponse.json({ error: 'Defina um identificador de tenant antes de ativar essa opção.' }, { status: 400 })
+  }
+
+  if (parsed.data.userWebhookEnabled) {
+    const effectiveSlug = parsed.data.tenantSlug !== undefined ? parsed.data.tenantSlug : current?.tenantSlug
+    if (!effectiveSlug) return NextResponse.json({ error: 'Defina um identificador de tenant antes de ativar o webhook de usuários.' }, { status: 400 })
+    const effectiveUrl = parsed.data.userWebhookUrl !== undefined ? parsed.data.userWebhookUrl : current?.userWebhookUrl
+    const effectiveSecret = parsed.data.userWebhookSecret !== undefined ? parsed.data.userWebhookSecret : current?.userWebhookSecret
+    if (!effectiveUrl || !effectiveSecret) {
+      return NextResponse.json({ error: 'Informe a URL e o token antes de ativar o webhook de usuários.' }, { status: 400 })
+    }
   }
 
   const effectiveRedirectUris = parsed.data.redirectUris ?? current?.redirectUris ?? []
@@ -123,6 +143,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.tenantSlug !== undefined) data.tenantSlug = parsed.data.tenantSlug || null
   if (parsed.data.applyTenantAfterLogin !== undefined) data.applyTenantAfterLogin = parsed.data.applyTenantAfterLogin
   if (parsed.data.tenantDomain !== undefined) data.tenantDomain = parsed.data.tenantDomain || null
+  if (parsed.data.userWebhookEnabled !== undefined) data.userWebhookEnabled = parsed.data.userWebhookEnabled
+  if (parsed.data.userWebhookUrl !== undefined) data.userWebhookUrl = parsed.data.userWebhookUrl || null
+  if (parsed.data.userWebhookSecret !== undefined) data.userWebhookSecret = parsed.data.userWebhookSecret || null
   if (parsed.data.defaultRedirectUri !== undefined) {
     data.defaultRedirectUri = parsed.data.defaultRedirectUri || null
   } else if (parsed.data.redirectUris && current?.defaultRedirectUri && !parsed.data.redirectUris.includes(current.defaultRedirectUri)) {
