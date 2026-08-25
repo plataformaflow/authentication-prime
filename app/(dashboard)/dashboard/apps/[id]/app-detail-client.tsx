@@ -762,6 +762,10 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
   const [loading, setLoading] = useState(false)
   const [resetResult, setResetResult] = useState<{ type: 'link' | 'provisional'; value: string; userName: string } | null>(null)
   const [resetResultCopied, setResetResultCopied] = useState(false)
+  const [provisionalUser, setProvisionalUser] = useState<AppUser | null>(null)
+  const [provisionalPassword, setProvisionalPassword] = useState('')
+  const [provisionalError, setProvisionalError] = useState('')
+  const [provisionalLoading, setProvisionalLoading] = useState(false)
 
   useEffect(() => { fetch(`/api/apps/${appId}/users`).then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d) }) }, [appId])
 
@@ -788,6 +792,26 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
       setProvisionalOnCreate(false)
     } catch { toast.error('Erro ao criar usuário.') }
     finally { setLoading(false) }
+  }
+
+  async function handleSetProvisional(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!provisionalPassword || provisionalPassword.length < 8) { setProvisionalError('Senha deve ter ao menos 8 caracteres.'); return }
+    setProvisionalError('')
+    setProvisionalLoading(true)
+    try {
+      const res = await fetch(`/api/apps/${appId}/users/${provisionalUser!.id}/provisional-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: provisionalPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      setUsers(p => p.map(u => u.id === provisionalUser!.id ? { ...u, mustChangePassword: true } : u))
+      toast.success('Senha provisória definida!')
+      setProvisionalUser(null)
+      setProvisionalPassword('')
+    } catch { toast.error('Erro ao definir senha provisória.') }
+    finally { setProvisionalLoading(false) }
   }
 
   async function handleDelete(userId: string) {
@@ -883,6 +907,30 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
               {loading ? 'Criando...' : 'Criar usuário'}
             </button>
             <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}); setProvisionalOnCreate(false) }}
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!provisionalUser} onClose={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
+        title="Definir senha provisória" description={provisionalUser ? `Para ${provisionalUser.name}` : ''} size="sm">
+        <form onSubmit={handleSetProvisional} noValidate className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            No próximo login, o usuário verá um aviso e poderá definir uma senha definitiva na hora, ou adiar para depois.
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Nova senha provisória</label>
+            <input type="password" maxLength={128} placeholder="••••••••" value={provisionalPassword}
+              onChange={e => { setProvisionalPassword(e.target.value); setProvisionalError('') }}
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+            {provisionalError && <p className="text-xs text-destructive">{provisionalError}</p>}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={provisionalLoading}
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
+              {provisionalLoading ? 'Salvando...' : 'Definir senha'}
+            </button>
+            <button type="button" onClick={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
               className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
           </div>
         </form>
@@ -993,6 +1041,12 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
                               Reset senha
                             </button>
                           )}
+                          {canEdit && provisionalPasswordEnabled && (
+                            <button onClick={() => setProvisionalUser(u)}
+                              className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                              Senha provisória
+                            </button>
+                          )}
                           {canDelete && (
                             <button onClick={() => handleDelete(u.id)}
                               className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
@@ -1040,6 +1094,12 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
                         <button onClick={() => handleResetPassword(u.id, u.name)}
                           className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
                           Reset senha
+                        </button>
+                      )}
+                      {canEdit && provisionalPasswordEnabled && (
+                        <button onClick={() => setProvisionalUser(u)}
+                          className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
+                          Senha provisória
                         </button>
                       )}
                       {canDelete && (
