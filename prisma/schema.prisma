@@ -116,6 +116,10 @@ model OAuthApp {
   // login exibe o aviso + opção de trocar a senha antes de prosseguir. Ver
   // POST /api/oauth/login (route.ts) e app/(auth)/oauth/login/page.tsx.
   provisionalPasswordEnabled Boolean            @default(false)
+  // Texto puro (não hash) de propósito, igual Company.apiKey — precisa ser
+  // usada como a senha literal do AppUser (hasheada na hora de aplicar) e
+  // também exibida de novo pro admin, não só uma vez ao salvar.
+  provisionalPasswordDefault String?
   companyId             String
   company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users                 AppUser[]

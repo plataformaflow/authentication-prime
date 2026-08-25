@@ -26,6 +26,7 @@ interface AppDetail {
   tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null; tenantDomain?: string | null
   userWebhookEnabled?: boolean; userWebhookUrl?: string | null; userWebhookSecret?: string | null
   provisionalPasswordEnabled?: boolean
+  provisionalPasswordDefault?: string | null
   company: { id: string; name: string }; createdAt: string
   _access: 'full' | 'collaborator'
   _permissions?: AppPerms
@@ -569,19 +570,27 @@ function AppUserWebhookSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a
 
 function AppProvisionalPasswordSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
   const [enabled, setEnabled] = useState(app.provisionalPasswordEnabled ?? false)
+  const [defaultPassword, setDefaultPassword] = useState(app.provisionalPasswordDefault ?? '')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSave(ev: React.FormEvent) {
     ev.preventDefault()
+    if (enabled && (!defaultPassword || defaultPassword.length < 8)) {
+      setError('Defina uma senha provisória padrão com ao menos 8 caracteres antes de ativar.')
+      return
+    }
+    setError('')
     setSaving(true)
     try {
       const res = await fetch(`/api/apps/${app.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provisionalPasswordEnabled: enabled }),
+        body: JSON.stringify({ provisionalPasswordEnabled: enabled, provisionalPasswordDefault: defaultPassword }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      onUpdate({ ...app, provisionalPasswordEnabled: data.provisionalPasswordEnabled })
+      onUpdate({ ...app, provisionalPasswordEnabled: data.provisionalPasswordEnabled, provisionalPasswordDefault: data.provisionalPasswordDefault })
       toast.success('Configuração salva!')
     } catch { toast.error('Erro ao salvar.') }
     finally { setSaving(false) }
@@ -591,19 +600,37 @@ function AppProvisionalPasswordSection({ app, onUpdate }: { app: AppDetail; onUp
     <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
       <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Senha provisória</h3>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Quando ativado, você pode definir uma senha provisória para um usuário na aba &quot;Usuários&quot;. No próximo login, a
-        tela de autenticação avisa o usuário e oferece a opção de definir uma senha definitiva na hora, ou adiar para depois.
+        Quando ativado, o botão &quot;Reset senha&quot; na aba &quot;Usuários&quot; passa a aplicar a senha provisória padrão abaixo
+        diretamente ao usuário, em vez de gerar um link. No próximo login, a tela de autenticação avisa o usuário e oferece a
+        opção de definir uma senha definitiva na hora, ou adiar para depois.
       </p>
       <form onSubmit={handleSave} noValidate className="space-y-4">
         <label className="flex items-start gap-2.5 text-sm cursor-pointer">
           <input type="checkbox" checked={enabled}
-            onChange={e => setEnabled(e.target.checked)}
+            onChange={e => { setEnabled(e.target.checked); setError('') }}
             className="mt-0.5 rounded accent-indigo-600" />
           <span>
             <span className="font-medium">Ativar senha provisória</span>
             <span className="block text-xs text-muted-foreground mt-0.5">Desativado por padrão.</span>
           </span>
         </label>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Senha provisória padrão</label>
+          <div className="relative">
+            <input type={showPassword ? 'text' : 'password'} maxLength={128} value={defaultPassword}
+              placeholder="Ao menos 8 caracteres"
+              onChange={e => { setDefaultPassword(e.target.value); setError('') }}
+              className="w-full h-10 px-3 pr-9 rounded-xl border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+            <button type="button" onClick={() => setShowPassword(v => !v)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
         <button type="submit" disabled={saving}
           className="px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
           {saving ? 'Salvando...' : 'Salvar'}
@@ -733,12 +760,8 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
   const [provisionalOnCreate, setProvisionalOnCreate] = useState(false)
   const [formErrors, setFormErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
-  const [resetLink, setResetLink] = useState<{ link: string; userName: string } | null>(null)
-  const [resetLinkCopied, setResetLinkCopied] = useState(false)
-  const [provisionalUser, setProvisionalUser] = useState<AppUser | null>(null)
-  const [provisionalPassword, setProvisionalPassword] = useState('')
-  const [provisionalError, setProvisionalError] = useState('')
-  const [provisionalLoading, setProvisionalLoading] = useState(false)
+  const [resetResult, setResetResult] = useState<{ type: 'link' | 'provisional'; value: string; userName: string } | null>(null)
+  const [resetResultCopied, setResetResultCopied] = useState(false)
 
   useEffect(() => { fetch(`/api/apps/${appId}/users`).then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d) }) }, [appId])
 
@@ -765,26 +788,6 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
       setProvisionalOnCreate(false)
     } catch { toast.error('Erro ao criar usuário.') }
     finally { setLoading(false) }
-  }
-
-  async function handleSetProvisional(ev: React.FormEvent) {
-    ev.preventDefault()
-    if (!provisionalPassword || provisionalPassword.length < 8) { setProvisionalError('Senha deve ter ao menos 8 caracteres.'); return }
-    setProvisionalError('')
-    setProvisionalLoading(true)
-    try {
-      const res = await fetch(`/api/apps/${appId}/users/${provisionalUser!.id}/provisional-password`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: provisionalPassword }),
-      })
-      const data = await res.json()
-      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      setUsers(p => p.map(u => u.id === provisionalUser!.id ? { ...u, mustChangePassword: true } : u))
-      toast.success('Senha provisória definida!')
-      setProvisionalUser(null)
-      setProvisionalPassword('')
-    } catch { toast.error('Erro ao definir senha provisória.') }
-    finally { setProvisionalLoading(false) }
   }
 
   async function handleDelete(userId: string) {
@@ -825,9 +828,14 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
   async function handleResetPassword(userId: string, userName: string) {
     const res = await fetch(`/api/apps/${appId}/users/${userId}/reset-password`, { method: 'POST' })
     const data = await res.json()
-    if (!res.ok) { toast.error('Erro ao gerar link.'); return }
-    setResetLink({ link: data.link, userName })
-    setResetLinkCopied(false)
+    if (!res.ok) { toast.error(apiErrorMessage(data, 'Erro ao redefinir senha.')); return }
+    if (data.provisional) {
+      setUsers(p => p.map(u => u.id === userId ? { ...u, mustChangePassword: true } : u))
+      setResetResult({ type: 'provisional', value: data.password, userName })
+    } else {
+      setResetResult({ type: 'link', value: data.link, userName })
+    }
+    setResetResultCopied(false)
   }
 
   const atLimit = maxUsers !== null && users.length >= maxUsers
@@ -880,42 +888,21 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
         </form>
       </Modal>
 
-      <Modal open={!!provisionalUser} onClose={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
-        title="Definir senha provisória" description={provisionalUser ? `Para ${provisionalUser.name}` : ''} size="sm">
-        <form onSubmit={handleSetProvisional} noValidate className="space-y-4">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            No próximo login, o usuário verá um aviso e poderá definir uma senha definitiva na hora, ou adiar para depois.
-          </p>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Nova senha provisória</label>
-            <input type="password" maxLength={128} placeholder="••••••••" value={provisionalPassword}
-              onChange={e => { setProvisionalPassword(e.target.value); setProvisionalError('') }}
-              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
-            {provisionalError && <p className="text-xs text-destructive">{provisionalError}</p>}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={provisionalLoading}
-              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
-              {provisionalLoading ? 'Salvando...' : 'Definir senha'}
-            </button>
-            <button type="button" onClick={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
-              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={!!resetLink} onClose={() => setResetLink(null)} title="Link de redefinição de senha"
-        description={resetLink ? `Gerado para ${resetLink.userName}` : ''} size="sm">
+      <Modal open={!!resetResult} onClose={() => setResetResult(null)}
+        title={resetResult?.type === 'provisional' ? 'Senha provisória definida' : 'Link de redefinição de senha'}
+        description={resetResult ? `Para ${resetResult.userName}` : ''} size="sm">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Copie o link e envie para o usuário. Expira em <strong className="text-foreground">24 horas</strong> e só pode ser usado uma vez.
+            {resetResult?.type === 'provisional'
+              ? <>Informe esta senha ao usuário. No próximo login, ele verá o aviso de senha provisória e poderá definir uma senha definitiva.</>
+              : <>Copie o link e envie para o usuário. Expira em <strong className="text-foreground">24 horas</strong> e só pode ser usado uma vez.</>}
           </p>
           <div className="bg-muted rounded-xl p-3">
-            <p className="text-xs font-mono break-all text-foreground leading-relaxed select-all">{resetLink?.link}</p>
+            <p className="text-xs font-mono break-all text-foreground leading-relaxed select-all">{resetResult?.value}</p>
           </div>
-          <button onClick={() => { if (!resetLink) return; navigator.clipboard.writeText(resetLink.link); setResetLinkCopied(true); setTimeout(() => setResetLinkCopied(false), 2000) }}
-            className={`w-full h-10 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${resetLinkCopied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
-            {resetLinkCopied ? <><Check className="w-4 h-4" /> Copiado!</> : <><Copy className="w-4 h-4" /> Copiar link</>}
+          <button onClick={() => { if (!resetResult) return; navigator.clipboard.writeText(resetResult.value); setResetResultCopied(true); setTimeout(() => setResetResultCopied(false), 2000) }}
+            className={`w-full h-10 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${resetResultCopied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
+            {resetResultCopied ? <><Check className="w-4 h-4" /> Copiado!</> : <><Copy className="w-4 h-4" /> {resetResult?.type === 'provisional' ? 'Copiar senha' : 'Copiar link'}</>}
           </button>
         </div>
       </Modal>
@@ -1006,12 +993,6 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
                               Reset senha
                             </button>
                           )}
-                          {canEdit && provisionalPasswordEnabled && (
-                            <button onClick={() => setProvisionalUser(u)}
-                              className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
-                              Senha provisória
-                            </button>
-                          )}
                           {canDelete && (
                             <button onClick={() => handleDelete(u.id)}
                               className="text-xs px-2.5 py-1 text-destructive border border-destructive/30 rounded-lg hover:bg-destructive/10 transition-colors">
@@ -1059,12 +1040,6 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provision
                         <button onClick={() => handleResetPassword(u.id, u.name)}
                           className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
                           Reset senha
-                        </button>
-                      )}
-                      {canEdit && provisionalPasswordEnabled && (
-                        <button onClick={() => setProvisionalUser(u)}
-                          className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
-                          Senha provisória
                         </button>
                       )}
                       {canDelete && (

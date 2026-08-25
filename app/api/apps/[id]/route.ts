@@ -93,6 +93,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     userWebhookUrl: z.string().url().optional().or(z.literal('')),
     userWebhookSecret: z.string().min(16).max(200).optional().or(z.literal('')),
     provisionalPasswordEnabled: z.boolean().optional(),
+    provisionalPasswordDefault: z.string().min(8).max(128).optional().or(z.literal('')),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
 
@@ -106,12 +107,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const needsCurrent =
     parsed.data.applyTenantAfterLogin ||
     parsed.data.userWebhookEnabled ||
+    parsed.data.provisionalPasswordEnabled ||
     parsed.data.defaultRedirectUri !== undefined ||
     parsed.data.redirectUris
   const current = needsCurrent
     ? await prisma.oAuthApp.findUnique({
         where: { id },
-        select: { tenantSlug: true, redirectUris: true, defaultRedirectUri: true, userWebhookUrl: true, userWebhookSecret: true },
+        select: { tenantSlug: true, redirectUris: true, defaultRedirectUri: true, userWebhookUrl: true, userWebhookSecret: true, provisionalPasswordDefault: true },
       })
     : null
 
@@ -128,6 +130,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!effectiveUrl || !effectiveSecret) {
       return NextResponse.json({ error: 'Informe a URL e o token antes de ativar o webhook de usuários.' }, { status: 400 })
     }
+  }
+
+  if (parsed.data.provisionalPasswordEnabled) {
+    const effectiveDefault = parsed.data.provisionalPasswordDefault !== undefined ? parsed.data.provisionalPasswordDefault : current?.provisionalPasswordDefault
+    if (!effectiveDefault) return NextResponse.json({ error: 'Defina uma senha provisória padrão antes de ativar essa opção.' }, { status: 400 })
   }
 
   const effectiveRedirectUris = parsed.data.redirectUris ?? current?.redirectUris ?? []
@@ -148,6 +155,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.userWebhookUrl !== undefined) data.userWebhookUrl = parsed.data.userWebhookUrl || null
   if (parsed.data.userWebhookSecret !== undefined) data.userWebhookSecret = parsed.data.userWebhookSecret || null
   if (parsed.data.provisionalPasswordEnabled !== undefined) data.provisionalPasswordEnabled = parsed.data.provisionalPasswordEnabled
+  if (parsed.data.provisionalPasswordDefault !== undefined) data.provisionalPasswordDefault = parsed.data.provisionalPasswordDefault || null
   if (parsed.data.defaultRedirectUri !== undefined) {
     data.defaultRedirectUri = parsed.data.defaultRedirectUri || null
   } else if (parsed.data.redirectUris && current?.defaultRedirectUri && !parsed.data.redirectUris.includes(current.defaultRedirectUri)) {
