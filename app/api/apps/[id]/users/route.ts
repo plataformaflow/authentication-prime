@@ -57,12 +57,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     name: z.string().min(2),
     username: z.string().min(3).regex(/^[a-z0-9_.-]+$/),
     password: z.string().min(8),
+    provisionalPassword: z.boolean().optional(),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
 
   const username = parsed.data.username.toLowerCase()
   const existing = await prisma.appUser.findUnique({ where: { username_appId: { username, appId: id } } })
   if (existing) return NextResponse.json({ error: 'Username já cadastrado neste app.' }, { status: 409 })
+
+  // Buscado antes de criar o usuário — usado tanto para o webhook (abaixo)
+  // quanto para decidir se a senha informada pode ser marcada como provisória.
+  const app = await prisma.oAuthApp.findUnique({
+    where: { id },
+    select: { clientId: true, tenantSlug: true, userWebhookEnabled: true, userWebhookUrl: true, userWebhookSecret: true, provisionalPasswordEnabled: true },
+  })
 
   const user = await prisma.appUser.create({
     data: {
@@ -71,6 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       password: await hashPassword(parsed.data.password),
       appId: id,
       createdByOwnerId: session.ownerId,
+      mustChangePassword: !!(parsed.data.provisionalPassword && app?.provisionalPasswordEnabled),
     },
     select: {
       id: true, name: true, username: true, mustChangePassword: true, createdAt: true,
@@ -84,10 +93,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Fire-and-forget — nunca atrasa/derruba a criação do usuário se o Prime
   // Visita estiver fora do ar ou o webhook não estiver configurado/ativado.
-  const app = await prisma.oAuthApp.findUnique({
-    where: { id },
-    select: { clientId: true, tenantSlug: true, userWebhookEnabled: true, userWebhookUrl: true, userWebhookSecret: true },
-  })
   const target = app ? userWebhookTargetFor(app) : null
   if (app && target) {
     void dispatchUserCreatedWebhook(target, { clientId: app.clientId, sub: user.id, username: user.username, name: user.name })

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash, randomBytes } from 'crypto'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
 import { generateAuthCode } from '@/lib/oauth/code'
+
+const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
 const limiter = new Map<string, { count: number; reset: number }>()
 function rateLimit(key: string, max: number, windowMs: number) {
@@ -59,6 +62,20 @@ export async function POST(req: NextRequest) {
   }
   redirectUrl.searchParams.set('code', code)
   if (state) redirectUrl.searchParams.set('state', state)
+
+  // Quando a aplicação ativou o aviso de senha provisória, a própria tela de
+  // login mostra o banner e resolve a troca antes de redirecionar — por isso
+  // não anexamos "must_change_password" aqui (evitaria informação obsoleta
+  // caso o usuário troque a senha na hora). Sem a flag, mantém o
+  // comportamento antigo: a aplicação cliente é quem trata o aviso.
+  if (user.mustChangePassword && app.provisionalPasswordEnabled) {
+    const rawToken = randomBytes(36).toString('hex')
+    await prisma.passwordResetToken.create({
+      data: { tokenHash: sha256(rawToken), appUserId: user.id, expiresAt: new Date(Date.now() + 15 * 60 * 1000) },
+    })
+    return NextResponse.json({ redirect: redirectUrl.toString(), mustChangePassword: true, resetToken: rawToken })
+  }
+
   if (user.mustChangePassword) redirectUrl.searchParams.set('must_change_password', '1')
   return NextResponse.json({ redirect: redirectUrl.toString() })
 }

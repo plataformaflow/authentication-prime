@@ -92,6 +92,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     userWebhookEnabled: z.boolean().optional(),
     userWebhookUrl: z.string().url().optional().or(z.literal('')),
     userWebhookSecret: z.string().min(16).max(200).optional().or(z.literal('')),
+    provisionalPasswordEnabled: z.boolean().optional(),
   }).safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
 
@@ -146,6 +147,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (parsed.data.userWebhookEnabled !== undefined) data.userWebhookEnabled = parsed.data.userWebhookEnabled
   if (parsed.data.userWebhookUrl !== undefined) data.userWebhookUrl = parsed.data.userWebhookUrl || null
   if (parsed.data.userWebhookSecret !== undefined) data.userWebhookSecret = parsed.data.userWebhookSecret || null
+  if (parsed.data.provisionalPasswordEnabled !== undefined) data.provisionalPasswordEnabled = parsed.data.provisionalPasswordEnabled
   if (parsed.data.defaultRedirectUri !== undefined) {
     data.defaultRedirectUri = parsed.data.defaultRedirectUri || null
   } else if (parsed.data.redirectUris && current?.defaultRedirectUri && !parsed.data.redirectUris.includes(current.defaultRedirectUri)) {

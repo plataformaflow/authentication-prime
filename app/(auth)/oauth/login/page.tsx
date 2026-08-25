@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Sun, Moon, Eye, EyeOff, AlertTriangle, X, ShieldAlert, LogIn } from 'lucide-react'
-import { validateUsername, type FieldErrors, apiErrorMessage } from '@/lib/validation'
+import { validateUsername, validatePassword, validateConfirmPassword, type FieldErrors, apiErrorMessage } from '@/lib/validation'
 
 export default function OAuthLoginPage() {
   return <Suspense><OAuthLoginForm /></Suspense>
@@ -41,6 +41,15 @@ function OAuthLoginForm() {
   const [redirecting, setRedirecting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
+
+  // Senha provisória: preenchido quando o login é bem-sucedido mas o
+  // servidor sinaliza mustChangePassword + resetToken (só ocorre quando a
+  // aplicação tem provisionalPasswordEnabled ativado — ver /api/oauth/login).
+  const [provisional, setProvisional] = useState<{ redirect: string; resetToken: string } | null>(null)
+  const [showNewPasswordForm, setShowNewPasswordForm] = useState(false)
+  const [newPasswordForm, setNewPasswordForm] = useState({ password: '', confirm: '' })
+  const [newPasswordErrors, setNewPasswordErrors] = useState<FieldErrors>({})
+  const [settingPassword, setSettingPassword] = useState(false)
 
   const clientId = searchParams.get('client_id') ?? ''
   const redirectUri = searchParams.get('redirect_uri') ?? ''
@@ -79,10 +88,48 @@ function OAuthLoginForm() {
       })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      if (data.mustChangePassword && data.resetToken) {
+        setProvisional({ redirect: data.redirect, resetToken: data.resetToken })
+        return
+      }
       setRedirecting(true)
       window.location.href = data.redirect
     } catch { toast.error('Erro ao conectar com o servidor.') }
     finally { setLoading(false) }
+  }
+
+  function validateNewPassword(): boolean {
+    const e: FieldErrors = {}
+    const passErr = validatePassword(newPasswordForm.password, 'Nova senha')
+    if (passErr) e.password = passErr
+    const confirmErr = validateConfirmPassword(newPasswordForm.password, newPasswordForm.confirm)
+    if (confirmErr) e.confirm = confirmErr
+    setNewPasswordErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  async function handleSetNewPassword(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!provisional || !validateNewPassword()) return
+    setSettingPassword(true)
+    try {
+      const res = await fetch('/api/oauth/reset-password?action=reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: provisional.resetToken, newPassword: newPasswordForm.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      toast.success('Senha definida com sucesso!')
+      setRedirecting(true)
+      window.location.href = provisional.redirect
+    } catch { toast.error('Erro ao conectar com o servidor.') }
+    finally { setSettingPassword(false) }
+  }
+
+  function postponeNewPassword() {
+    if (!provisional) return
+    setRedirecting(true)
+    window.location.href = provisional.redirect
   }
 
   if (validating) {
@@ -128,6 +175,71 @@ function OAuthLoginForm() {
           <div className="text-center space-y-1.5">
             <p className="text-base font-bold text-[#1e3a8a] dark:text-white">Login realizado com sucesso!</p>
             <p className="text-sm text-slate-400 dark:text-slate-500">Redirecionando...</p>
+          </div>
+        </div>
+      </PageShell>
+    )
+  }
+
+  if (provisional) {
+    return (
+      <PageShell isDark={isDark} onToggle={toggleTheme}>
+        <div className="bg-white dark:bg-[#13151f] rounded-xl shadow-2xl dark:shadow-black/40 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />
+          <div className="p-8 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="font-bold text-[#1e3a8a] dark:text-white">Você está usando uma senha provisória</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Definida por um administrador. Recomendamos trocá-la agora.</p>
+              </div>
+            </div>
+
+            {!showNewPasswordForm ? (
+              <div className="flex flex-col gap-2.5 pt-1">
+                <button onClick={() => setShowNewPasswordForm(true)}
+                  className="w-full h-11 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white text-sm font-semibold transition-all">
+                  Definir nova senha
+                </button>
+                <button onClick={postponeNewPassword}
+                  className="w-full h-11 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors">
+                  Definir em outra hora
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSetNewPassword} noValidate className="space-y-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[#1e3a8a] dark:text-slate-200">Nova senha</label>
+                  <input type="password" maxLength={128} autoComplete="new-password" autoFocus
+                    value={newPasswordForm.password}
+                    onChange={e => setNewPasswordForm(p => ({ ...p, password: e.target.value }))}
+                    aria-invalid={!!newPasswordErrors.password}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f172a] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all" />
+                  {newPasswordErrors.password && <p className="text-xs text-red-500">{newPasswordErrors.password}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-[#1e3a8a] dark:text-slate-200">Confirmar nova senha</label>
+                  <input type="password" maxLength={128} autoComplete="new-password"
+                    value={newPasswordForm.confirm}
+                    onChange={e => setNewPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                    aria-invalid={!!newPasswordErrors.confirm}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0f172a] text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 transition-all" />
+                  {newPasswordErrors.confirm && <p className="text-xs text-red-500">{newPasswordErrors.confirm}</p>}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="submit" disabled={settingPassword}
+                    className="flex-1 h-11 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] text-white text-sm font-semibold transition-all disabled:opacity-60">
+                    {settingPassword ? 'Salvando...' : 'Salvar e continuar'}
+                  </button>
+                  <button type="button" onClick={() => setShowNewPasswordForm(false)}
+                    className="px-4 h-11 text-sm border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
+                    Voltar
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </PageShell>

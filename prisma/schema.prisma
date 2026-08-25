@@ -45,7 +45,10 @@ model Company {
   cpf              String?
   logoUrl          String?
   description      String?
-  apiKeyHash       String?
+  // Texto puro (não hash) de propósito — precisa poder ser exibida de novo
+  // pro dono da empresa a qualquer momento, não só uma vez ao gerar. Ver
+  // /api/companies/[id]/api-key (GET) e lib/companyApiAuth.ts (consumo).
+  apiKey           String?
   ownerId          String
   owner            Owner               @relation(fields: [ownerId], references: [id])
   apps             OAuthApp[]
@@ -108,6 +111,11 @@ model OAuthApp {
   userWebhookEnabled    Boolean                 @default(false)
   userWebhookUrl        String?
   userWebhookSecret     String?
+  // Libera o fluxo de senha provisória: quando true, o admin pode definir uma
+  // senha provisória para um AppUser (via mustChangePassword) e a tela de
+  // login exibe o aviso + opção de trocar a senha antes de prosseguir. Ver
+  // POST /api/oauth/login (route.ts) e app/(auth)/oauth/login/page.tsx.
+  provisionalPasswordEnabled Boolean            @default(false)
   companyId             String
   company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   users                 AppUser[]

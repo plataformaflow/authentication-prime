@@ -25,6 +25,7 @@ interface AppDetail {
   clientId?: string; clientSecret?: string | null; scopes: string[]; redirectUris?: string[]
   tenantSlug?: string | null; applyTenantAfterLogin?: boolean; defaultRedirectUri?: string | null; tenantDomain?: string | null
   userWebhookEnabled?: boolean; userWebhookUrl?: string | null; userWebhookSecret?: string | null
+  provisionalPasswordEnabled?: boolean
   company: { id: string; name: string }; createdAt: string
   _access: 'full' | 'collaborator'
   _permissions?: AppPerms
@@ -112,7 +113,8 @@ export function AppDetailClient({ id, initialApp, initialAnalytics }: {
       {tab === 'profile' && <AppProfileTab app={app} onUpdate={setApp} />}
       {tab === 'api' && isFull && <AppApiTab app={app} onUpdate={setApp} />}
       {tab === 'users' && (
-        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull || perms.canDeleteUsers} maxUsers={isFull ? null : perms.maxUsers} />
+        <AppUsersTab appId={id} canCreate={isFull || perms.canCreateUsers} canEdit={isFull || perms.canEditUsers} canDelete={isFull || perms.canDeleteUsers} maxUsers={isFull ? null : perms.maxUsers}
+          provisionalPasswordEnabled={app.provisionalPasswordEnabled ?? false} />
       )}
       {tab === 'collaborators' && isFull && <AppCollaboratorsTab appId={id} />}
       {tab === 'activity' && isFull && <AppActivityTab appId={id} appName={app.name} />}
@@ -316,9 +318,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
   })
   const [formErrors, setFormErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
-  const [newSecret, setNewSecret] = useState('')
   const [copied, setCopied] = useState(false)
-  const [showSecret, setShowSecret] = useState(false)
   const [secretCopied, setSecretCopied] = useState(false)
 
   function toggleScope(s: string) {
@@ -343,9 +343,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
     const res = await fetch(`/api/apps/${app.id}/rotate-secret`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error('Erro ao rotacionar.'); return }
-    setNewSecret(data.clientSecret)
     onUpdate({ ...app, clientSecret: data.clientSecret })
-    setShowSecret(false)
     toast.success('Secret rotacionado!')
   }
 
@@ -388,13 +386,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
           <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Client Secret</label>
           {app.clientSecret ? (
             <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-              <code className="text-sm font-mono text-foreground flex-1 truncate">
-                {showSecret ? app.clientSecret : '•'.repeat(24)}
-              </code>
-              <button onClick={() => setShowSecret(s => !s)} title={showSecret ? 'Ocultar' : 'Visualizar'}
-                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              <code className="text-sm font-mono text-foreground flex-1 break-all">{app.clientSecret}</code>
               <button onClick={copySecretValue} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
                 {secretCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
@@ -403,16 +395,6 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
             <p className="text-xs text-muted-foreground italic">Token gerado antes desta atualização — rotacione para poder visualizá-lo aqui.</p>
           )}
         </div>
-        {newSecret && (
-          <div className="space-y-2">
-            <label className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> Novo Client Secret — salve agora!
-            </label>
-            <code className="text-xs font-mono bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-3 py-2 rounded-lg block break-all text-amber-800 dark:text-amber-200">
-              {newSecret}
-            </code>
-          </div>
-        )}
         <button onClick={handleRotate}
           className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
           <RefreshCw className="w-3.5 h-3.5" /> Rotacionar Client Secret
@@ -453,6 +435,7 @@ function AppApiTab({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail)
 
       <AppTenantSection app={app} onUpdate={onUpdate} />
       <AppUserWebhookSection app={app} onUpdate={onUpdate} />
+      <AppProvisionalPasswordSection app={app} onUpdate={onUpdate} />
     </div>
   )
 }
@@ -582,6 +565,54 @@ function AppUserWebhookSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a
   )
 }
 
+// ─── Provisional Password Section ────────────────────────────────────────────
+
+function AppProvisionalPasswordSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
+  const [enabled, setEnabled] = useState(app.provisionalPasswordEnabled ?? false)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave(ev: React.FormEvent) {
+    ev.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/apps/${app.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provisionalPasswordEnabled: enabled }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      onUpdate({ ...app, provisionalPasswordEnabled: data.provisionalPasswordEnabled })
+      toast.success('Configuração salva!')
+    } catch { toast.error('Erro ao salvar.') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
+      <h3 className="font-semibold text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Senha provisória</h3>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Quando ativado, você pode definir uma senha provisória para um usuário na aba &quot;Usuários&quot;. No próximo login, a
+        tela de autenticação avisa o usuário e oferece a opção de definir uma senha definitiva na hora, ou adiar para depois.
+      </p>
+      <form onSubmit={handleSave} noValidate className="space-y-4">
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+          <input type="checkbox" checked={enabled}
+            onChange={e => setEnabled(e.target.checked)}
+            className="mt-0.5 rounded accent-indigo-600" />
+          <span>
+            <span className="font-medium">Ativar senha provisória</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">Desativado por padrão.</span>
+          </span>
+        </label>
+        <button type="submit" disabled={saving}
+          className="px-4 py-2 text-sm bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg shadow-sm transition-all disabled:opacity-60">
+          {saving ? 'Salvando...' : 'Salvar'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ─── Tenant Section ──────────────────────────────────────────────────────────
 
 function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: AppDetail) => void }) {
@@ -691,7 +722,7 @@ function AppTenantSection({ app, onUpdate }: { app: AppDetail; onUpdate: (a: App
 
 type AppUser = { id: string; name: string; username: string; mustChangePassword: boolean; createdAt: string; createdByOwner?: { id: string; name: string } | null }
 
-function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId: string; canCreate: boolean; canEdit: boolean; canDelete: boolean; maxUsers: number | null }) {
+function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers, provisionalPasswordEnabled }: { appId: string; canCreate: boolean; canEdit: boolean; canDelete: boolean; maxUsers: number | null; provisionalPasswordEnabled: boolean }) {
   const [users, setUsers] = useState<AppUser[]>([])
   const [showCreate, setShowCreate] = useState(false)
   const [editUser, setEditUser] = useState<AppUser | null>(null)
@@ -699,10 +730,15 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
   const [editErrors, setEditErrors] = useState<FieldErrors>({})
   const [editLoading, setEditLoading] = useState(false)
   const [form, setForm] = useState({ name: '', username: '', password: '' })
+  const [provisionalOnCreate, setProvisionalOnCreate] = useState(false)
   const [formErrors, setFormErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
   const [resetLink, setResetLink] = useState<{ link: string; userName: string } | null>(null)
   const [resetLinkCopied, setResetLinkCopied] = useState(false)
+  const [provisionalUser, setProvisionalUser] = useState<AppUser | null>(null)
+  const [provisionalPassword, setProvisionalPassword] = useState('')
+  const [provisionalError, setProvisionalError] = useState('')
+  const [provisionalLoading, setProvisionalLoading] = useState(false)
 
   useEffect(() => { fetch(`/api/apps/${appId}/users`).then(r => r.json()).then(d => { if (Array.isArray(d)) setUsers(d) }) }, [appId])
 
@@ -716,15 +752,39 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
     if (Object.keys(e).length > 0) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/apps/${appId}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await fetch(`/api/apps/${appId}/users`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, provisionalPassword: provisionalOnCreate }),
+      })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
       toast.success('Usuário criado!')
       setUsers(p => [data, ...p])
       setShowCreate(false)
       setForm({ name: '', username: '', password: '' })
+      setProvisionalOnCreate(false)
     } catch { toast.error('Erro ao criar usuário.') }
     finally { setLoading(false) }
+  }
+
+  async function handleSetProvisional(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!provisionalPassword || provisionalPassword.length < 8) { setProvisionalError('Senha deve ter ao menos 8 caracteres.'); return }
+    setProvisionalError('')
+    setProvisionalLoading(true)
+    try {
+      const res = await fetch(`/api/apps/${appId}/users/${provisionalUser!.id}/provisional-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: provisionalPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(apiErrorMessage(data)); return }
+      setUsers(p => p.map(u => u.id === provisionalUser!.id ? { ...u, mustChangePassword: true } : u))
+      toast.success('Senha provisória definida!')
+      setProvisionalUser(null)
+      setProvisionalPassword('')
+    } catch { toast.error('Erro ao definir senha provisória.') }
+    finally { setProvisionalLoading(false) }
   }
 
   async function handleDelete(userId: string) {
@@ -798,12 +858,47 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
               {formErrors[f.key] && <p className="text-xs text-destructive">{formErrors[f.key]}</p>}
             </div>
           ))}
+          {provisionalPasswordEnabled && (
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+              <input type="checkbox" checked={provisionalOnCreate}
+                onChange={e => setProvisionalOnCreate(e.target.checked)}
+                className="mt-0.5 rounded accent-indigo-600" />
+              <span>
+                <span className="font-medium">Senha provisória</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">O usuário verá um aviso no login e poderá definir uma senha definitiva.</span>
+              </span>
+            </label>
+          )}
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={loading}
               className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
               {loading ? 'Criando...' : 'Criar usuário'}
             </button>
-            <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}) }}
+            <button type="button" onClick={() => { setShowCreate(false); setFormErrors({}); setProvisionalOnCreate(false) }}
+              className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!provisionalUser} onClose={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
+        title="Definir senha provisória" description={provisionalUser ? `Para ${provisionalUser.name}` : ''} size="sm">
+        <form onSubmit={handleSetProvisional} noValidate className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            No próximo login, o usuário verá um aviso e poderá definir uma senha definitiva na hora, ou adiar para depois.
+          </p>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Nova senha provisória</label>
+            <input type="password" maxLength={128} placeholder="••••••••" value={provisionalPassword}
+              onChange={e => { setProvisionalPassword(e.target.value); setProvisionalError('') }}
+              className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/60 transition-all" />
+            {provisionalError && <p className="text-xs text-destructive">{provisionalError}</p>}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={provisionalLoading}
+              className="flex-1 h-10 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-lg shadow-sm transition-all disabled:opacity-60">
+              {provisionalLoading ? 'Salvando...' : 'Definir senha'}
+            </button>
+            <button type="button" onClick={() => { setProvisionalUser(null); setProvisionalPassword(''); setProvisionalError('') }}
               className="px-4 h-10 text-sm border border-border rounded-xl hover:bg-muted transition-colors">Cancelar</button>
           </div>
         </form>
@@ -884,7 +979,7 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
                             <p className="text-xs text-muted-foreground">@{u.username}</p>
                           </div>
                           {u.mustChangePassword && (
-                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Trocar senha</span>
+                            <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full">Senha provisória</span>
                           )}
                         </div>
                       </td>
@@ -909,6 +1004,12 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
                             <button onClick={() => handleResetPassword(u.id, u.name)}
                               className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
                               Reset senha
+                            </button>
+                          )}
+                          {canEdit && provisionalPasswordEnabled && (
+                            <button onClick={() => setProvisionalUser(u)}
+                              className="text-xs px-2.5 py-1 border border-border rounded-lg hover:bg-muted transition-colors">
+                              Senha provisória
                             </button>
                           )}
                           {canDelete && (
@@ -938,7 +1039,7 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
                       <p className="text-xs text-muted-foreground">@{u.username}</p>
                     </div>
                     {u.mustChangePassword && (
-                      <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">Trocar senha</span>
+                      <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">Senha provisória</span>
                     )}
                   </div>
                   {u.createdByOwner && (
@@ -958,6 +1059,12 @@ function AppUsersTab({ appId, canCreate, canEdit, canDelete, maxUsers }: { appId
                         <button onClick={() => handleResetPassword(u.id, u.name)}
                           className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
                           Reset senha
+                        </button>
+                      )}
+                      {canEdit && provisionalPasswordEnabled && (
+                        <button onClick={() => setProvisionalUser(u)}
+                          className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors">
+                          Senha provisória
                         </button>
                       )}
                       {canDelete && (
