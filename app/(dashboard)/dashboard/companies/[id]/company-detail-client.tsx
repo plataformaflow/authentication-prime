@@ -16,6 +16,7 @@ interface WebhookItem {
 
 interface CompanyDetail {
   id: string; name: string; cnpj?: string; cpf?: string; logoUrl?: string; description?: string; role: string
+  apiKey?: string | null
   apps: Array<{ id: string; name: string; _count: { users: number; authEvents: number } }>
   members: Array<{ id: string; owner: { id: string; name: string; email: string } }>
   webhooks: WebhookItem[]
@@ -360,7 +361,7 @@ function CompanySettingsTab({
         </form>
       </div>
 
-      <CompanyApiKeySection companyId={company.id} />
+      <CompanyApiKeySection companyId={company.id} apiKey={company.apiKey} onUpdate={apiKey => onUpdate({ ...company, apiKey })} />
 
       <CompanyWebhooksSection companyId={company.id} webhooks={company.webhooks} onUpdate={webhooks => onUpdate({ ...company, webhooks })} />
 
@@ -379,26 +380,26 @@ function CompanySettingsTab({
   )
 }
 
-function CompanyApiKeySection({ companyId }: { companyId: string }) {
-  const [newKey, setNewKey] = useState('')
+function CompanyApiKeySection({ companyId, apiKey, onUpdate }: { companyId: string; apiKey?: string | null; onUpdate: (apiKey: string) => void }) {
   const [copied, setCopied] = useState(false)
   const [rotating, setRotating] = useState(false)
 
   async function handleRotate() {
-    if (!confirm('Gerar uma nova chave invalidará a anterior imediatamente. Continuar?')) return
+    if (apiKey && !confirm('Gerar uma nova chave invalidará a anterior imediatamente. Continuar?')) return
     setRotating(true)
     try {
       const res = await fetch(`/api/companies/${companyId}/api-key/rotate`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) { toast.error(apiErrorMessage(data)); return }
-      setNewKey(data.apiKey)
+      onUpdate(data.apiKey)
       toast.success('Chave gerada!')
     } catch { toast.error('Erro ao gerar chave.') }
     finally { setRotating(false) }
   }
 
   function copy() {
-    navigator.clipboard.writeText(newKey)
+    if (!apiKey) return
+    navigator.clipboard.writeText(apiKey)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -412,22 +413,17 @@ function CompanyApiKeySection({ companyId }: { companyId: string }) {
       <p className="text-xs text-muted-foreground leading-relaxed">
         Dá acesso de leitura (via API) aos usuários de todas as aplicações desta empresa, independente de qual tenant/aplicação foi usado no login — não é vinculada a uma aplicação específica.
       </p>
-      {newKey && (
-        <div className="space-y-2">
-          <label className="text-xs text-amber-600 font-medium flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" /> Salve agora — não será exibida novamente!
-          </label>
-          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
-            <code className="text-xs font-mono text-amber-800 dark:text-amber-200 flex-1 truncate">{newKey}</code>
-            <button onClick={copy} className="shrink-0 text-amber-700 dark:text-amber-300 hover:opacity-80 transition-opacity">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
+      {apiKey && (
+        <div className="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2">
+          <code className="text-xs font-mono flex-1 break-all">{apiKey}</code>
+          <button onClick={copy} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+          </button>
         </div>
       )}
       <button onClick={handleRotate} disabled={rotating}
         className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-60">
-        <RefreshCw className="w-3.5 h-3.5" /> {rotating ? 'Gerando...' : 'Gerar / rotacionar chave'}
+        <RefreshCw className="w-3.5 h-3.5" /> {rotating ? 'Gerando...' : apiKey ? 'Rotacionar chave' : 'Gerar chave'}
       </button>
     </div>
   )

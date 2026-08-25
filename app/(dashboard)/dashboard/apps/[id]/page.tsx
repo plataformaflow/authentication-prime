@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { requireSession } from '@/lib/auth'
+import { tryDecryptSecret } from '@/lib/secretCrypto'
 import { AppDetailClient } from './app-detail-client'
 
 type AppAccess = 'full' | 'collaborator' | null
@@ -72,7 +73,11 @@ export default async function AppDetailPage({ params }: { params: Promise<{ id: 
         _access: 'collaborator' as const,
         _permissions: collab,
       }
-    : { ...app, _access: 'full' as const }
+    // Nunca manda o valor cru armazenado (criptografado, ou hash bcrypt
+    // legado) pro cliente — mesma decodificação de GET /api/apps/[id], só
+    // que aqui também, porque esta é a carga usada na primeira renderização
+    // da página (o fetch client-side só roda depois de uma edição).
+    : { ...app, clientSecret: tryDecryptSecret(app.clientSecret), _access: 'full' as const }
 
   return (
     <AppDetailClient
